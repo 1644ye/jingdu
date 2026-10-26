@@ -1,0 +1,745 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quietreader.local/schema/ebook-backup-v1.schema.json",
+  "title": "静读完整备份协议 v1",
+  "description": "自包含的结构校验Schema。不能替代LibraryStore.validateBackup：ID唯一性、跨引用、UTF-16偏移与quote、进度一致性、UTF-8字节量、48层/300万节点和128MiB文件上限由应用检查。未知字段允许，恢复只承诺已定义字段。content中的书籍定义与ebook-library-v1相同，特许books为空。",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "const": "ebook-backup"
+    },
+    "createdAt": {
+      "$ref": "#/$defs/int64"
+    },
+    "content": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "const": 1
+        },
+        "kind": {
+          "const": "ebook-library"
+        },
+        "books": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/poetry"
+              },
+              {
+                "$ref": "#/$defs/novel"
+              }
+            ]
+          },
+          "minItems": 0,
+          "description": "备份允许空书库；不同于普通内容文件，不设单文件1000本上限，但受全备份节点与文件大小上限限制。"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind",
+        "books"
+      ],
+      "additionalProperties": true
+    },
+    "library": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/libraryState"
+      },
+      "maxItems": 500000
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/shelfGroup"
+      },
+      "maxItems": 500000
+    },
+    "memberships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/membership"
+      },
+      "maxItems": 500000
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/position"
+      },
+      "maxItems": 500000
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/annotation"
+      },
+      "maxItems": 500000
+    },
+    "poemFavorites": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/poemFavorite"
+      },
+      "maxItems": 500000
+    },
+    "settings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/settingsEntry"
+      },
+      "maxItems": 500000
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "kind",
+    "createdAt",
+    "content",
+    "library",
+    "groups",
+    "memberships",
+    "positions",
+    "annotations",
+    "poemFavorites",
+    "settings",
+    "metadata"
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "text": {
+      "type": "string"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "poetry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "author": {
+          "$ref": "#/$defs/text"
+        },
+        "language": {
+          "type": "string",
+          "default": "zh-CN"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "type": {
+          "const": "poetry"
+        },
+        "poems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/poem"
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "poems"
+      ],
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "volumes"
+            ]
+          },
+          {
+            "required": [
+              "chapters"
+            ]
+          }
+        ]
+      }
+    },
+    "novel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "author": {
+          "$ref": "#/$defs/text"
+        },
+        "language": {
+          "type": "string",
+          "default": "zh-CN"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "type": {
+          "const": "novel"
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/volume"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "chapters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/chapter"
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "chapters"
+      ],
+      "additionalProperties": true,
+      "not": {
+        "required": [
+          "poems"
+        ]
+      }
+    },
+    "poem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "author": {
+          "$ref": "#/$defs/text"
+        },
+        "dynasty": {
+          "$ref": "#/$defs/text"
+        },
+        "genre": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "background": {
+          "$ref": "#/$defs/text"
+        },
+        "translation": {
+          "$ref": "#/$defs/text"
+        },
+        "appreciation": {
+          "$ref": "#/$defs/text"
+        },
+        "stanzas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stanza"
+          },
+          "minItems": 1,
+          "maxItems": 200000
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "stanzas"
+      ],
+      "additionalProperties": true
+    },
+    "stanza": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/line"
+          },
+          "minItems": 1,
+          "maxItems": 200000
+        }
+      },
+      "required": [
+        "id",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "line": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "original": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "pinyin": {
+          "$ref": "#/$defs/text"
+        },
+        "translation": {
+          "$ref": "#/$defs/text"
+        },
+        "note": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "required": [
+        "id",
+        "original"
+      ],
+      "additionalProperties": true
+    },
+    "volume": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "chapter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "volumeId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "minItems": 1,
+          "maxItems": 200000
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "blocks"
+      ],
+      "additionalProperties": true
+    },
+    "block": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "type": {
+              "enum": [
+                "paragraph",
+                "heading"
+              ]
+            },
+            "text": {
+              "$ref": "#/$defs/nonempty"
+            }
+          },
+          "required": [
+            "id",
+            "type",
+            "text"
+          ],
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "type": {
+              "const": "separator"
+            },
+            "text": {
+              "$ref": "#/$defs/text"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "additionalProperties": true
+        }
+      ]
+    },
+    "int64": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    },
+    "positiveInt64": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "fraction": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "anchor": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "sectionId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "contentId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "quote": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        },
+        "orphaned": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "bookId",
+        "sectionId",
+        "contentId",
+        "start",
+        "end",
+        "quote",
+        "prefix",
+        "suffix",
+        "orphaned"
+      ],
+      "additionalProperties": true,
+      "description": "偏移为 UTF-16 单元；end>=start、实际正文范围、quote一致性、引用存在及orphaned例外由应用语义校验。"
+    },
+    "libraryState": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "favorite": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": [
+            "unread",
+            "reading",
+            "read"
+          ]
+        },
+        "progress": {
+          "$ref": "#/$defs/fraction"
+        },
+        "lastRead": {
+          "$ref": "#/$defs/int64"
+        },
+        "importedAt": {
+          "$ref": "#/$defs/int64"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        }
+      },
+      "required": [
+        "bookId",
+        "favorite",
+        "status",
+        "progress",
+        "lastRead",
+        "importedAt",
+        "revision"
+      ],
+      "additionalProperties": true
+    },
+    "shelfGroup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/positiveInt64"
+        },
+        "name": {
+          "$ref": "#/$defs/nonempty"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "membership": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "groupId": {
+          "$ref": "#/$defs/positiveInt64"
+        }
+      },
+      "required": [
+        "bookId",
+        "groupId"
+      ],
+      "additionalProperties": true
+    },
+    "position": {
+      "type": "object",
+      "properties": {
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "progress": {
+          "$ref": "#/$defs/fraction"
+        }
+      },
+      "required": [
+        "anchor",
+        "progress"
+      ],
+      "additionalProperties": true
+    },
+    "annotation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/positiveInt64"
+        },
+        "anchor": {
+          "$ref": "#/$defs/anchor"
+        },
+        "kind": {
+          "enum": [
+            "bookmark",
+            "highlight",
+            "note"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "description": "UTF-8 编码后最多131072字节，应用另行检查；不是131072个字符。"
+        },
+        "createdAt": {
+          "$ref": "#/$defs/int64"
+        }
+      },
+      "required": [
+        "id",
+        "anchor",
+        "kind",
+        "note",
+        "createdAt"
+      ],
+      "additionalProperties": true
+    },
+    "poemFavorite": {
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "poemId": {
+          "$ref": "#/$defs/nonempty"
+        }
+      },
+      "required": [
+        "bookId",
+        "poemId"
+      ],
+      "additionalProperties": true
+    },
+    "readingSettings": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "scroll",
+            "page",
+            "paged"
+          ]
+        },
+        "fontSize": {
+          "type": "number",
+          "minimum": 12,
+          "maximum": 64
+        },
+        "lineSpacing": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "paragraphSpacing": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 80
+        },
+        "margin": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "fontFamily": {
+          "type": "string",
+          "pattern": "\\S",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "运行时另限制为256个UTF-16单元；JSON Schema maxLength按Unicode码点计数。"
+        },
+        "theme": {
+          "enum": [
+            "system",
+            "light",
+            "sepia",
+            "dark"
+          ]
+        },
+        "keepAwake": {
+          "type": "boolean"
+        },
+        "indent": {
+          "type": "boolean"
+        },
+        "showOriginal": {
+          "type": "boolean"
+        },
+        "showPinyin": {
+          "type": "boolean"
+        },
+        "showTranslation": {
+          "type": "boolean"
+        },
+        "showNotes": {
+          "type": "boolean"
+        },
+        "showAnalysis": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "mode",
+        "fontSize",
+        "lineSpacing",
+        "paragraphSpacing",
+        "margin",
+        "fontFamily",
+        "theme",
+        "keepAwake",
+        "indent",
+        "showOriginal",
+        "showPinyin",
+        "showTranslation",
+        "showNotes",
+        "showAnalysis"
+      ],
+      "additionalProperties": true
+    },
+    "settingsEntry": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": "string",
+          "description": "空字符串表示全局；其他值必须是存在的书籍ID。"
+        },
+        "settings": {
+          "$ref": "#/$defs/readingSettings"
+        }
+      },
+      "required": [
+        "scope",
+        "settings"
+      ],
+      "additionalProperties": true
+    }
+  }
+}

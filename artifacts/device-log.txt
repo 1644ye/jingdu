@@ -1,0 +1,57 @@
+--------- beginning of main
+10-26 13:23:13.047  4606  4637 I QuietReaderPerf: device=sdk_gphone64_x86_64 api=36 mode=debug; 1000 poems; 1000 chapters / 3000000 CJK characters; 10-book batch
+10-26 13:23:13.124  4606  4637 I QuietReaderPerf: {"stage":"generate-1000-poems","elapsedMs":54,"observedPssKiB":87445,"observedJavaHeapBytes":6912688}
+10-26 13:23:13.744  4606  4637 I QuietReaderPerf: {"stage":"import-1000-poems","elapsedMs":608,"observedPssKiB":90755,"observedJavaHeapBytes":10873744}
+10-26 13:23:13.772  4606  4637 I QuietReaderPerf: {"stage":"generate-1000-chapters-3000000-characters","elapsedMs":12,"observedPssKiB":115807,"observedJavaHeapBytes":13097872}
+10-26 13:23:14.109  4606  4637 I QuietReaderPerf: {"stage":"import-1000-chapters-3000000-characters","elapsedMs":325,"observedPssKiB":95995,"observedJavaHeapBytes":15547280}
+10-26 13:23:14.124  4606  4637 I QuietReaderPerf: {"stage":"import-10-book-batch","elapsedMs":4,"observedPssKiB":96179,"observedJavaHeapBytes":15711120}
+10-26 13:23:14.135  4606  4637 I QuietReaderPerf: {"stage":"list-books-12","elapsedMs":1,"observedPssKiB":96227,"observedJavaHeapBytes":15776656}
+10-26 13:23:14.150  4606  4637 I QuietReaderPerf: {"stage":"poetry-directory-1000","elapsedMs":4,"observedPssKiB":97283,"observedJavaHeapBytes":15874960}
+10-26 13:23:14.164  4606  4637 I QuietReaderPerf: {"stage":"novel-directory-1000","elapsedMs":4,"observedPssKiB":98655,"observedJavaHeapBytes":16038800}
+10-26 13:23:14.175  4606  4637 I QuietReaderPerf: {"stage":"read-one-middle-chapter","elapsedMs":1,"observedPssKiB":98687,"observedJavaHeapBytes":16071568}
+10-26 13:23:14.232  4606  4637 I QuietReaderPerf: {"stage":"chinese-search-unique-hit-in-last-chapter","elapsedMs":46,"observedPssKiB":98723,"observedJavaHeapBytes":16071568}
+10-26 13:23:14.245  4606  4637 I QuietReaderPerf: {"stage":"save-location-note-settings","elapsedMs":2,"observedPssKiB":98711,"observedJavaHeapBytes":16104336}
+10-26 13:23:14.259  4606  4637 I QuietReaderPerf: {"stage":"close-reopen-and-restore-location","elapsedMs":3,"observedPssKiB":98711,"observedJavaHeapBytes":16137104}
+10-26 13:23:14.399  4606  4637 I QuietReaderPerf: {"stage":"assemble-full-backup","elapsedMs":127,"observedPssKiB":113527,"observedJavaHeapBytes":31112080}
+10-26 13:23:14.654  4606  4637 I QuietReaderPerf: {"stage":"validate-full-backup","elapsedMs":243,"observedPssKiB":122647,"observedJavaHeapBytes":40852368}
+10-26 13:23:14.750  4606  4637 I QuietReaderPerf: {"stage":"serialize-full-backup-utf8","elapsedMs":83,"observedPssKiB":136259,"observedJavaHeapBytes":56314768}
+10-26 13:23:15.382  4606  4637 I QuietReaderPerf: {"stage":"restore-backup-into-empty-database","elapsedMs":619,"observedPssKiB":120335,"observedJavaHeapBytes":37616560}
+10-26 13:23:15.443  4606  4637 I QuietReaderPerf: {"stage":"verify-restored-relations-and-location","elapsedMs":50,"observedPssKiB":122655,"observedJavaHeapBytes":37878704}
+10-26 13:23:15.444  4606  4637 I QuietReaderPerf: report=/data/user/0/org.quietreader/files/performance-result.json; result="passed"
+10-26 13:23:19.341  4606  4637 I QuietReaderPerf: device=Google/sdk_gphone64_x86_64 api=36 abi=x86_64, arm64-v8a mode=debug viewport=1080x2400 density=2.625 fontScale=1.0 heapLimitBytes=201326592 chapters=1000 originalCharacters=3000000 samples=1
+10-26 13:23:19.652  4606  4637 I QuietReaderPerf: transactional_import=303.867 ms
+10-26 13:23:19.659  4606  4637 I QuietReaderPerf: directory_1000_rows=3.979 ms
+10-26 13:23:19.660  4606  4637 I QuietReaderPerf: load_one_chapter=0.162 ms
+10-26 13:23:20.258  4606  4637 I QuietReaderPerf: reader_open_to_laid_out_text=597.968 ms
+10-26 13:23:20.273  4606  4637 I QuietReaderPerf: page_turn_to_laid_out_text=14.351 ms
+10-26 13:23:20.680  4606  4637 I QuietReaderPerf: full_text_search_marker_in_last_chapter=45.874 ms
+10-26 13:23:21.327  4606  4637 I QuietReaderPerf: reopen_to_laid_out_text=641.179 ms
+10-26 13:23:21.327  4606  4637 I QuietReaderPerf: heapUsedBytesObserved=4759408 heapSampleIsNotPeak=true result=PASS
+10-26 13:41:54.354  6500  6514 I QuietReaderPerf: device=sdk_gphone64_x86_64 api=36 mode=debug; 1000 poems; 1000 chapters / 3000000 CJK characters; 10-book batch
+10-26 13:41:54.384  6500  6514 I QuietReaderPerf: {"stage":"generate-1000-poems","elapsedMs":16,"observedPssKiB":90014,"observedJavaHeapBytes":6036288}
+10-26 13:41:54.677  6500  6514 I QuietReaderPerf: {"stage":"import-1000-poems","elapsedMs":281,"observedPssKiB":96256,"observedJavaHeapBytes":10816320}
+10-26 13:41:54.699  6500  6514 I QuietReaderPerf: {"stage":"generate-1000-chapters-3000000-characters","elapsedMs":9,"observedPssKiB":104784,"observedJavaHeapBytes":13060928}
+10-26 13:41:54.966  6500  6514 I QuietReaderPerf: {"stage":"import-1000-chapters-3000000-characters","elapsedMs":255,"observedPssKiB":102516,"observedJavaHeapBytes":16608064}
+10-26 13:41:54.981  6500  6514 I QuietReaderPerf: {"stage":"import-10-book-batch","elapsedMs":4,"observedPssKiB":102696,"observedJavaHeapBytes":16804672}
+10-26 13:41:54.993  6500  6514 I QuietReaderPerf: {"stage":"list-books-12","elapsedMs":0,"observedPssKiB":102740,"observedJavaHeapBytes":16870208}
+10-26 13:41:55.007  6500  6514 I QuietReaderPerf: {"stage":"poetry-directory-1000","elapsedMs":3,"observedPssKiB":103804,"observedJavaHeapBytes":16968512}
+10-26 13:41:55.022  6500  6514 I QuietReaderPerf: {"stage":"novel-directory-1000","elapsedMs":4,"observedPssKiB":105168,"observedJavaHeapBytes":17132352}
+10-26 13:41:55.033  6500  6514 I QuietReaderPerf: {"stage":"read-one-middle-chapter","elapsedMs":0,"observedPssKiB":105200,"observedJavaHeapBytes":17165120}
+10-26 13:41:55.088  6500  6514 I QuietReaderPerf: {"stage":"chinese-search-unique-hit-in-last-chapter","elapsedMs":44,"observedPssKiB":105236,"observedJavaHeapBytes":17165120}
+10-26 13:41:55.101  6500  6514 I QuietReaderPerf: {"stage":"save-location-note-settings","elapsedMs":2,"observedPssKiB":105296,"observedJavaHeapBytes":17197888}
+10-26 13:41:55.116  6500  6514 I QuietReaderPerf: {"stage":"close-reopen-and-restore-location","elapsedMs":4,"observedPssKiB":100928,"observedJavaHeapBytes":17230656}
+10-26 13:41:55.240  6500  6514 I QuietReaderPerf: {"stage":"assemble-full-backup","elapsedMs":113,"observedPssKiB":113958,"observedJavaHeapBytes":28199744}
+10-26 13:41:55.471  6500  6514 I QuietReaderPerf: {"stage":"validate-full-backup","elapsedMs":219,"observedPssKiB":130470,"observedJavaHeapBytes":29866816}
+10-26 13:41:55.560  6500  6514 I QuietReaderPerf: {"stage":"serialize-full-backup-utf8","elapsedMs":75,"observedPssKiB":139450,"observedJavaHeapBytes":56277824}
+10-26 13:41:56.184  6500  6514 I QuietReaderPerf: {"stage":"restore-backup-into-empty-database","elapsedMs":612,"observedPssKiB":120618,"observedJavaHeapBytes":32537440}
+10-26 13:41:56.246  6500  6514 I QuietReaderPerf: {"stage":"verify-restored-relations-and-location","elapsedMs":51,"observedPssKiB":123014,"observedJavaHeapBytes":32770912}
+10-26 13:41:56.246  6500  6514 I QuietReaderPerf: report=/data/user/0/org.quietreader/files/performance-result.json; result="passed"
+10-26 13:42:00.232  6500  6514 I QuietReaderPerf: device=Google/sdk_gphone64_x86_64 api=36 abi=x86_64, arm64-v8a mode=debug viewport=1080x2400 density=2.625 fontScale=1.0 heapLimitBytes=201326592 chapters=1000 originalCharacters=3000000 samples=1
+10-26 13:42:00.530  6500  6514 I QuietReaderPerf: transactional_import=290.374 ms
+10-26 13:42:00.538  6500  6514 I QuietReaderPerf: directory_1000_rows=4.316 ms
+10-26 13:42:00.538  6500  6514 I QuietReaderPerf: load_one_chapter=0.188 ms
+10-26 13:42:01.125  6500  6514 I QuietReaderPerf: reader_open_to_laid_out_text=586.382 ms
+10-26 13:42:01.143  6500  6514 I QuietReaderPerf: page_turn_to_laid_out_text=16.385 ms
+10-26 13:42:01.534  6500  6514 I QuietReaderPerf: full_text_search_marker_in_last_chapter=44.551 ms
+10-26 13:42:02.142  6500  6514 I QuietReaderPerf: reopen_to_laid_out_text=606.103 ms
+10-26 13:42:02.142  6500  6514 I QuietReaderPerf: heapUsedBytesObserved=9127952 heapSampleIsNotPeak=true result=PASS

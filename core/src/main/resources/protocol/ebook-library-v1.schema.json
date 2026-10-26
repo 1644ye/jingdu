@@ -1,0 +1,355 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quietreader.local/schema/ebook-library-v1.schema.json",
+  "title": "静读电子书内容协议 v1",
+  "description": "未知字段允许通过Schema，应用在预览中警告并丢弃。ID跨层级唯一、volumeId引用、32MiB文件大小、32层深度及单书20万内部节点由语义校验器额外验证。",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "const": "ebook-library"
+    },
+    "books": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/poetry"
+          },
+          {
+            "$ref": "#/$defs/novel"
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 1000
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "kind",
+    "books"
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "text": {
+      "type": "string"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "poetry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "author": {
+          "$ref": "#/$defs/text"
+        },
+        "language": {
+          "type": "string",
+          "default": "zh-CN"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "type": {
+          "const": "poetry"
+        },
+        "poems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/poem"
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "poems"
+      ],
+      "additionalProperties": true,
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "volumes"
+            ]
+          },
+          {
+            "required": [
+              "chapters"
+            ]
+          }
+        ]
+      }
+    },
+    "novel": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "author": {
+          "$ref": "#/$defs/text"
+        },
+        "language": {
+          "type": "string",
+          "default": "zh-CN"
+        },
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "type": {
+          "const": "novel"
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/volume"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "chapters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/chapter"
+          },
+          "minItems": 1,
+          "maxItems": 10000
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "title",
+        "chapters"
+      ],
+      "additionalProperties": true,
+      "not": {
+        "required": [
+          "poems"
+        ]
+      }
+    },
+    "poem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "author": {
+          "$ref": "#/$defs/text"
+        },
+        "dynasty": {
+          "$ref": "#/$defs/text"
+        },
+        "genre": {
+          "$ref": "#/$defs/text"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        },
+        "background": {
+          "$ref": "#/$defs/text"
+        },
+        "translation": {
+          "$ref": "#/$defs/text"
+        },
+        "appreciation": {
+          "$ref": "#/$defs/text"
+        },
+        "stanzas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stanza"
+          },
+          "minItems": 1,
+          "maxItems": 200000
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "stanzas"
+      ],
+      "additionalProperties": true
+    },
+    "stanza": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/line"
+          },
+          "minItems": 1,
+          "maxItems": 200000
+        }
+      },
+      "required": [
+        "id",
+        "lines"
+      ],
+      "additionalProperties": true
+    },
+    "line": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "original": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "pinyin": {
+          "$ref": "#/$defs/text"
+        },
+        "translation": {
+          "$ref": "#/$defs/text"
+        },
+        "note": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "required": [
+        "id",
+        "original"
+      ],
+      "additionalProperties": true
+    },
+    "volume": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "additionalProperties": true
+    },
+    "chapter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "title": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "volumeId": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/block"
+          },
+          "minItems": 1,
+          "maxItems": 200000
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "blocks"
+      ],
+      "additionalProperties": true
+    },
+    "block": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "type": {
+              "enum": [
+                "paragraph",
+                "heading"
+              ]
+            },
+            "text": {
+              "$ref": "#/$defs/nonempty"
+            }
+          },
+          "required": [
+            "id",
+            "type",
+            "text"
+          ],
+          "additionalProperties": true
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "type": {
+              "const": "separator"
+            },
+            "text": {
+              "$ref": "#/$defs/text"
+            }
+          },
+          "required": [
+            "id",
+            "type"
+          ],
+          "additionalProperties": true
+        }
+      ]
+    }
+  }
+}

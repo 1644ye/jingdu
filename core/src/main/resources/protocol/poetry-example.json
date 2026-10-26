@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "kind": "ebook-library",
+  "books": [
+    {
+      "id": "book-poetry-demo",
+      "type": "poetry",
+      "title": "诗歌示例集",
+      "author": "李白",
+      "language": "zh-CN",
+      "description": "用于演示诗歌分行及辅助内容。",
+      "tags": ["唐诗", "示例"],
+      "poems": [
+        {
+          "id": "poem-jing-ye-si",
+          "title": "静夜思",
+          "author": "李白",
+          "dynasty": "唐",
+          "genre": "五言绝句",
+          "tags": ["思乡"],
+          "background": "",
+          "translation": "",
+          "appreciation": "",
+          "stanzas": [
+            {
+              "id": "stanza-1",
+              "lines": [
+                {
+                  "id": "line-1",
+                  "original": "床前明月光，",
+                  "pinyin": "chuáng qián míng yuè guāng",
+                  "translation": "明亮的月光洒在床前。",
+                  "note": ""
+                },
+                {
+                  "id": "line-2",
+                  "original": "疑是地上霜。",
+                  "pinyin": "yí shì dì shàng shuāng",
+                  "translation": "好像地上铺了一层霜。",
+                  "note": ""
+                },
+                {
+                  "id": "line-3",
+                  "original": "举头望明月，",
+                  "pinyin": "jǔ tóu wàng míng yuè",
+                  "translation": "抬头望着明月。",
+                  "note": ""
+                },
+                {
+                  "id": "line-4",
+                  "original": "低头思故乡。",
+                  "pinyin": "dī tóu sī gù xiāng",
+                  "translation": "低头思念故乡。",
+                  "note": ""
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

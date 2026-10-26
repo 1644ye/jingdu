@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.quietreader.core.ProtocolTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-26T13:19:29.186Z" hostname="AMD-YES" time="0.15">
+  <properties/>
+  <testcase name="userExamplesAndMinimalTemplatesAreAcceptedUnmodified" classname="org.quietreader.core.ProtocolTest" time="0.052"/>
+  <testcase name="unknownFieldsWarnAndAreRemovedWithoutMutatingInput" classname="org.quietreader.core.ProtocolTest" time="0.015"/>
+  <testcase name="duplicateBookIdsAreRejectedEvenWithDifferentTitles" classname="org.quietreader.core.ProtocolTest" time="0.005"/>
+  <testcase name="duplicateJsonKeysAreRejectedRatherThanLastValueWinning" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="utf8ByteLimitCountsChineseBytesNotOnlyCharacters" classname="org.quietreader.core.ProtocolTest" time="0.042"/>
+  <testcase name="missingVolumeReferenceIsRejected" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="bookAndInternalIdsHaveSeparateNamespaces" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="allInternalIdsShareOneNamespace" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="versionAndKindAreStrict" classname="org.quietreader.core.ProtocolTest" time="0.005"/>
+  <testcase name="originalWhitespaceAndScriptLikeTextSurviveRoundTrip" classname="org.quietreader.core.ProtocolTest" time="0.006"/>
+  <testcase name="malformedAndLenientJsonAreRejected" classname="org.quietreader.core.ProtocolTest" time="0.001"/>
+  <testcase name="invalidValuesHaveSpecificPathsAndRepairAdvice" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="separatorDoesNotRequireText" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="typeCannotSilentlyDiscardWrongKnownStructure" classname="org.quietreader.core.ProtocolTest" time="0.002"/>
+  <testcase name="utf8BomIsAccepted" classname="org.quietreader.core.ProtocolTest" time="0.001"/>
+  <testcase name="absentLanguageDefaultsToChinese" classname="org.quietreader.core.ProtocolTest" time="0.001"/>
+  <testcase name="optionalStringsMayBeAbsentOrEmptyButNotNull" classname="org.quietreader.core.ProtocolTest" time="0.001"/>
+  <testcase name="nestingLimitIsEnforcedBeforeStackOverflow" classname="org.quietreader.core.ProtocolTest" time="0.0"/>
+  <testcase name="directValidationAlsoEnforcesDepthLimit" classname="org.quietreader.core.ProtocolTest" time="0.0"/>
+  <testcase name="copyGeneratesAllNewIdsAndRebuildsReferences" classname="org.quietreader.core.ProtocolTest" time="0.004"/>
+  <testcase name="actualContentArraysCannotBeEmpty" classname="org.quietreader.core.ProtocolTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,124 @@
+{
+  "deviceModel": "sdk_gphone64_x86_64",
+  "manufacturer": "Google",
+  "api": 36,
+  "androidRelease": "16",
+  "abis": "x86_64,arm64-v8a",
+  "package": "org.quietreader",
+  "buildMode": "debug",
+  "poemCount": 1000,
+  "novelChapters": 1000,
+  "novelChineseCharacters": 3000000,
+  "batchBookCount": 10,
+  "memoryNote": "PSS 与 Java heap 为各阶段完成后的观测值，不是峰值；没有强制 GC。",
+  "measurementScope": "Android SQLite 数据层：导入、目录、正文按需读取、中文搜索、进度、备份恢复；不代表UI首帧或翻页性能。",
+  "deviceTotalRamBytes": 2592120832,
+  "startedAt": 1793022114354,
+  "stages": [
+    {
+      "stage": "generate-1000-poems",
+      "elapsedMs": 16,
+      "observedPssKiB": 90014,
+      "observedJavaHeapBytes": 6036288
+    },
+    {
+      "stage": "import-1000-poems",
+      "elapsedMs": 281,
+      "observedPssKiB": 96256,
+      "observedJavaHeapBytes": 10816320
+    },
+    {
+      "stage": "generate-1000-chapters-3000000-characters",
+      "elapsedMs": 9,
+      "observedPssKiB": 104784,
+      "observedJavaHeapBytes": 13060928
+    },
+    {
+      "stage": "import-1000-chapters-3000000-characters",
+      "elapsedMs": 255,
+      "observedPssKiB": 102516,
+      "observedJavaHeapBytes": 16608064
+    },
+    {
+      "stage": "import-10-book-batch",
+      "elapsedMs": 4,
+      "observedPssKiB": 102696,
+      "observedJavaHeapBytes": 16804672
+    },
+    {
+      "stage": "list-books-12",
+      "elapsedMs": 0,
+      "observedPssKiB": 102740,
+      "observedJavaHeapBytes": 16870208
+    },
+    {
+      "stage": "poetry-directory-1000",
+      "elapsedMs": 3,
+      "observedPssKiB": 103804,
+      "observedJavaHeapBytes": 16968512
+    },
+    {
+      "stage": "novel-directory-1000",
+      "elapsedMs": 4,
+      "observedPssKiB": 105168,
+      "observedJavaHeapBytes": 17132352
+    },
+    {
+      "stage": "read-one-middle-chapter",
+      "elapsedMs": 0,
+      "observedPssKiB": 105200,
+      "observedJavaHeapBytes": 17165120
+    },
+    {
+      "stage": "chinese-search-unique-hit-in-last-chapter",
+      "elapsedMs": 44,
+      "observedPssKiB": 105236,
+      "observedJavaHeapBytes": 17165120
+    },
+    {
+      "stage": "save-location-note-settings",
+      "elapsedMs": 2,
+      "observedPssKiB": 105296,
+      "observedJavaHeapBytes": 17197888
+    },
+    {
+      "stage": "close-reopen-and-restore-location",
+      "elapsedMs": 4,
+      "observedPssKiB": 100928,
+      "observedJavaHeapBytes": 17230656
+    },
+    {
+      "stage": "assemble-full-backup",
+      "elapsedMs": 113,
+      "observedPssKiB": 113958,
+      "observedJavaHeapBytes": 28199744
+    },
+    {
+      "stage": "validate-full-backup",
+      "elapsedMs": 219,
+      "observedPssKiB": 130470,
+      "observedJavaHeapBytes": 29866816
+    },
+    {
+      "stage": "serialize-full-backup-utf8",
+      "elapsedMs": 75,
+      "observedPssKiB": 139450,
+      "observedJavaHeapBytes": 56277824
+    },
+    {
+      "stage": "restore-backup-into-empty-database",
+      "elapsedMs": 612,
+      "observedPssKiB": 120618,
+      "observedJavaHeapBytes": 32537440
+    },
+    {
+      "stage": "verify-restored-relations-and-location",
+      "elapsedMs": 51,
+      "observedPssKiB": 123014,
+      "observedJavaHeapBytes": 32770912
+    }
+  ],
+  "serializedBackupBytes": 9932642,
+  "result": "passed",
+  "finishedAt": 1793022116246
+}

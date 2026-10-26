@@ -1,0 +1,16 @@
+.gradle/
+.kotlin/
+build/
+**/build/
+local.properties
+.idea/
+.tools/
+*.iml
+artifacts/*.apk
+artifacts/*.zip
+artifacts/large-*.json
+artifacts/emulator*.log
+artifacts/instrumentation-20*.txt
+*.jks
+*.keystore
+keystore.properties

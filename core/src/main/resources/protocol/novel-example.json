@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "kind": "ebook-library",
+  "books": [
+    {
+      "id": "book-novel-demo",
+      "type": "novel",
+      "title": "山城来信",
+      "author": "示例作者",
+      "language": "zh-CN",
+      "description": "用于测试小说阅读的原创示例。",
+      "tags": ["小说", "示例"],
+      "volumes": [
+        {
+          "id": "volume-1",
+          "title": "第一卷"
+        }
+      ],
+      "chapters": [
+        {
+          "id": "chapter-1",
+          "volumeId": "volume-1",
+          "title": "第一章 来信",
+          "blocks": [
+            {
+              "id": "block-1",
+              "type": "paragraph",
+              "text": "雨停的时候，一封没有署名的信送到了旧书店。"
+            },
+            {
+              "id": "block-2",
+              "type": "paragraph",
+              "text": "林舟拆开信封，里面只有一张车票和一句话。"
+            },
+            {
+              "id": "block-3",
+              "type": "separator"
+            },
+            {
+              "id": "block-4",
+              "type": "heading",
+              "text": "傍晚"
+            },
+            {
+              "id": "block-5",
+              "type": "paragraph",
+              "text": "他关上店门，沿着潮湿的石阶走向车站。"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

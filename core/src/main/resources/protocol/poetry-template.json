@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "kind": "ebook-library",
+  "books": [
+    {
+      "id": "my-poetry-1",
+      "type": "poetry",
+      "title": "填写诗集名称",
+      "poems": [
+        {
+          "id": "poem-1",
+          "title": "填写诗作标题",
+          "stanzas": [
+            {
+              "id": "stanza-1",
+              "lines": [
+                {
+                  "id": "line-1",
+                  "original": "填写第一行诗文"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
