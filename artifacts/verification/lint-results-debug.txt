@@ -1,7 +1,7 @@
-app\src\main\java\org\quietreader\reader\ReaderActivity.kt:360: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:361: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
             breakStrategy=android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE;hyphenationFrequency=android.text.Layout.HYPHENATION_FREQUENCY_NONE
                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-app\src\main\java\org\quietreader\reader\ReaderActivity.kt:360: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:361: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
             breakStrategy=android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE;hyphenationFrequency=android.text.Layout.HYPHENATION_FREQUENCY_NONE
                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 app\src\main\java\org\quietreader\reader\ReaderLayout.kt:135: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
@@ -84,7 +84,10 @@ app\src\main\AndroidManifest.xml:3: Warning: The attribute android:dataExtractio
    https://developer.android.com/about/versions/12/backup-restore#xml-changes
    https://goo.gle/DataExtractionRules
 
-app\src\main\java\org\quietreader\reader\ReaderActivity.kt:713: Warning: Custom view PageSurface is missing constructor used by tools: (Context) or (Context,AttributeSet) or (Context,AttributeSet,int) [ViewConstructor]
+app\src\main\java\org\quietreader\AppearanceEditor.kt:14: Warning: Custom view AppearanceEditor is missing constructor used by tools: (Context) or (Context,AttributeSet) or (Context,AttributeSet,int) [ViewConstructor]
+class AppearanceEditor(
+      ~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:716: Warning: Custom view PageSurface is missing constructor used by tools: (Context) or (Context,AttributeSet) or (Context,AttributeSet,int) [ViewConstructor]
 private class PageSurface(context:Context,private val turn:(Boolean)->Unit,private val tap:()->Unit):FrameLayout(context){
               ~~~~~~~~~~~
 
@@ -100,16 +103,22 @@ private class PageSurface(context:Context,private val turn:(Boolean)->Unit,priva
    to see if View#isInEditMode() is false, since that method will return false
    at runtime but true within a user interface editor.
 
-app\src\main\java\org\quietreader\MainActivity.kt:436: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+app\src\main\java\org\quietreader\AppearanceEditor.kt:63: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+        fields.forEach{(button,read)->val color=Color.parseColor(read());button.text="${button.contentDescription}  ${read().uppercase(Locale.ROOT)}";button.setTextColor(Ui.contrastText(color));button.background=GradientDrawable().apply{setColor(color);cornerRadius=ui.dp(10).toFloat();setStroke(ui.dp(1),ui.muted)}}
+                                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\AppearanceEditor.kt:88: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+            listOf("红 R","绿 G","蓝 B").forEachIndexed{i,name->labels.getOrNull(i)?.text="$name · ${components()[i]}"}
+                                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\MainActivity.kt:450: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
             fun slider(title:String,min:Int,max:Int,current:Int,label:(Int)->String,apply:(Int)->ReadingSettings){val text=ui.text("$title · ${label(current)}",16f,true);panel.addView(text);val bar=SeekBar(this).apply{this.max=max-min;progress=(current-min).coerceIn(0,max-min);contentDescription=title};bar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(b:SeekBar?,p:Int,user:Boolean){text.text="$title · ${label(p+min)}";if(user){val next=apply(p+min);preview.textSize=next.fontSize;preview.setLineSpacing(0f,next.lineSpacing)}};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){save(apply(bar.progress+min))}});panel.addView(bar)}
                                                                                                                                                                                                                                                                                                                                                                                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~
-app\src\main\java\org\quietreader\reader\ReaderActivity.kt:625: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:628: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
         slider.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(bar:SeekBar?,value:Int,user:Boolean){val index=((value/1000f)*sections.size).toInt().coerceAtMost(sections.lastIndex);label.text="${value/10f}% · ${sections[index].title}"};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){} })
                                                                                                                                                                                                                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-app\src\main\java\org\quietreader\reader\ReaderActivity.kt:665: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:668: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
         val preview=TextView(this).apply{text="山光悦鸟性，潭影空人心。\n阅读设置会立即预览并保存。";setPadding(dp(12),dp(12),dp(12),dp(12));textSize=settings.fontSize;typeface=ReaderPaginator.face(settings,"body");setTextColor(this@ReaderActivity.foreground);setBackgroundColor(this@ReaderActivity.background)}
                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-app\src\main\java\org\quietreader\reader\ReaderActivity.kt:683: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:686: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
                 override fun onProgressChanged(b:SeekBar?,value:Int,user:Boolean){heading.text="$title · ${format(value+min)}";if(title=="字号")preview.textSize=(value+min).toFloat()}
                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -126,4 +135,4 @@ app\src\main\java\org\quietreader\reader\ReaderActivity.kt:683: Warning: Do not 
 
    https://developer.android.com/guide/topics/resources/localization.html
 
-0 errors, 11 warnings
+0 errors, 14 warnings

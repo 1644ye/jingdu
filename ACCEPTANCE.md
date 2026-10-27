@@ -1,4 +1,26 @@
-# 静读 1.0.0 验收报告
+# 静读验收报告
+
+## 1.0.1 更新验收 · 2026-10-27
+
+- 首页的“导入 JSON”“下载模板”移至“更多”。模板与备份各有独立入口。
+- “全选当前”“取消选择”“批量操作”移至“更多 → 书架管理”。管理页点击书籍勾选，取消选择后继续点击仍可勾选；全选作用于当前筛选结果；返回书架退出选择。保留长按书籍进入管理的快捷方式。
+- 新增“更多 → 应用配色”：预设主题与配色、任意六位十六进制色值、RGB 滑杆、实时预览、显式保存及恢复默认预览。背景、卡片和按钮可分别调整，文字自动选择对比度更高的黑色或白色。全局阅读页继承自定义配色，已有单书覆盖设置继续有效。
+- 新颜色随阅读设置持久化和备份；旧备份缺少颜色字段时使用默认值，非法颜色在写入前拒绝。没有改变数据库版本或删除已有数据。
+
+| 检查 | 结果与证据 |
+| --- | --- |
+| 核心测试 | 31 项通过；`artifacts/verification/TEST-org.quietreader.core.*.xml` |
+| 完整 API 36 设备回归 | **36 项通过**，34.041 秒；`artifacts/instrumentation-final.txt` |
+| 新界面截图复核 | 两项新增 UI 流程单独重跑通过，22.722 秒；`artifacts/verification/ui-1.0.1.txt`，截图等待弹窗动画及提示气泡结束，并核对深色背景下的筛选箭头 |
+| 新增 UI 验证 | 首页入口移除/更多入口可达、模板实际导出、筛选后全选/取消/再次选择、批量删除取消保护；HEX 无效值拒绝、HEX/RGB 修改、保存后重建页面保留、明暗文字及阅读页继承颜色 |
+| 新增 SQLite 验证 | 自定义色跨数据库重开与备份恢复；旧备份颜色默认值；非法色值拒绝且保留旧设置 |
+| 独立 Schema 检查 | 18 项通过，含旧设置、自定义配色和无效/null颜色变体 |
+| APK 与 Lint | debug APK 与测试包构建、覆盖安装成功；Lint 0 errors / 14 warnings；原有 Overdraw 分析器规避保持不变 |
+| 界面证据 | `artifacts/shelf-1-0-1.png`；`artifacts/visual/appearance-editor.png`、`bookshelf-management.png`、`custom-colors-shelf.png`、`custom-colors-reader.png` |
+
+设备仍为下文记录的 API 36 模拟器。首次新增配色 UI 测试在快速切换弹窗时未等待可访问性节点就绪，补充有界等待后完整套件通过；未放宽功能断言。以下真机、全面手势、无障碍和长期稳定性边界继续有效，不能将本次回归解释为所有原始验收项均已穷尽。
+
+## 1.0.0 历史验收
 
 日期：2026-10-26。交付为可安装的开发签名 **debug APK**，不是应用商店发行包。本报告区分自动测试通过、截图检查和仍待验证的行为，不把构建成功等同于所有体验验收通过。
 
@@ -8,8 +30,8 @@
 | --- | --- | --- |
 | Gradle `:core:test` | 31 项通过，0 失败、0 错误 | `artifacts/verification/TEST-org.quietreader.core.*.xml` |
 | `:app:assembleDebug`、`:app:assembleDebugAndroidTest` | 构建成功；应用与测试 APK 均在模拟器安装成功 | `tools/build.ps1`，`artifacts/QuietReader-1.0.0-debug.apk` |
-| `:app:lintDebug` | 0 errors，11 warnings | `artifacts/verification/lint-results-debug.txt` |
-| 全套 Android 仪器测试 | **33 项通过**，0 失败、0 错误，25.859 秒 | `artifacts/instrumentation-final.txt` |
+| `:app:lintDebug` | 0 errors，11 warnings | `artifacts/verification/lint-1.0.0.txt` |
+| 全套 Android 仪器测试 | **33 项通过**，0 失败、0 错误，25.859 秒 | `artifacts/verification/instrumentation-1.0.0.txt` |
 | 独立 JSON Schema 校验器 | 14 项检查通过，含两个 Schema、四份模板/示例、三份大规模输入及无效变体 | `tools/verify_schema.py` |
 | 清理专用模拟器测试数据后首次启动 | 成功；首页仅出现两本内置示例、导入及模板入口 | `artifacts/first-launch.png` |
 | 干净书库上的阅读截图复核 | VisualSmokeTest 单独重跑通过，4.493 秒；检查诗集、深色 40sp、横屏显示 | `artifacts/visual/` |

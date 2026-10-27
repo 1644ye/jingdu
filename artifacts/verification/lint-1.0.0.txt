@@ -1,0 +1,129 @@
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:360: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
+            breakStrategy=android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE;hyphenationFrequency=android.text.Layout.HYPHENATION_FREQUENCY_NONE
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:360: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
+            breakStrategy=android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE;hyphenationFrequency=android.text.Layout.HYPHENATION_FREQUENCY_NONE
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\reader\ReaderLayout.kt:135: Warning: Field requires API level 29 (current min is 26): android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE [InlinedApi]
+            .setLineSpacing(0f, settings.lineSpacing).setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE)
+                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "InlinedApi":
+   This check scans through all the Android API field references in the
+   application and flags certain constants, such as static final integers and
+   Strings, which were introduced in later versions. These will actually be
+   copied into the class files rather than being referenced, which means that
+   the value is available even when running on older devices. In some cases
+   that's fine, and in other cases it can result in a runtime crash or
+   incorrect behavior. It depends on the context, so consider the code
+   carefully and decide whether it's safe and can be suppressed or whether the
+   code needs to be guarded.
+
+   If you really want to use this API and don't need to support older devices
+   just set the minSdkVersion in your build.gradle or AndroidManifest.xml
+   files.
+
+   If your code is deliberately accessing newer APIs, and you have ensured
+   (e.g. with conditional execution) that this code will only ever be called
+   on a supported platform, then you can annotate your class or method with
+   the @TargetApi annotation specifying the local minimum SDK to apply, such
+   as @TargetApi(11), such that this check considers 11 rather than your
+   manifest file's minimum SDK as the required API level.
+
+app\build.gradle.kts:11: Warning: Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the android.os.Build.VERSION_CODES javadoc for details. [OldTargetApi]
+        targetSdk = 36
+        ~~~~~~~~~~~~~~
+
+   Explanation for issues of type "OldTargetApi":
+   When your application or sdk runs on a version of Android that is more
+   recent than your targetSdk specifies that it has been tested with, various
+   compatibility modes kick in. This ensures that your application continues
+   to work, but it may look out of place. For example, if the targetSdk is
+   less than 14, your app may get an option button in the UI.
+
+   To fix this issue, set the targetSdk to the highest available value. Then
+   test your app to make sure everything works correctly. You may want to
+   consult the compatibility notes to see what changes apply to each version
+   you are adding support for:
+   https://developer.android.com/reference/android/os/Build.VERSION_CODES.html
+   as well as follow this guide:
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.
+   html
+
+   https://developer.android.com/distribute/best-practices/develop/target-sdk.html
+
+app\build.gradle.kts:26: Warning: A newer version of com.google.code.gson:gson than 2.11.0 is available: 2.15.0 [NewerVersionAvailable]
+    implementation("com.google.code.gson:gson:2.11.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NewerVersionAvailable":
+   This detector checks with a central repository to see if there are newer
+   versions available for the dependencies used by this project. This is
+   similar to the GradleDependency check, which checks for newer versions
+   available in the Android SDK tools and libraries, but this works with any
+   MavenCentral dependency, and connects to the library every time, which
+   makes it more flexible but also much slower.
+
+app\src\main\AndroidManifest.xml:3: Warning: The attribute android:dataExtractionRules only applies for Android 12 and higher; since minSdkVersion is API 26 you should also set android:fullBackupContent [DataExtractionRules]
+    <application android:name=".ReaderApp" android:label="静读" android:theme="@style/AppTheme" android:allowBackup="false" android:dataExtractionRules="@xml/data_extraction_rules" android:supportsRtl="true" android:icon="@drawable/ic_book">
+                                                                                                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "DataExtractionRules":
+   Before Android 12, the attributes android:allowBackup and
+   android:fullBackupContent were used to configure all forms of backup,
+   including cloud backups, device-to-device transfers and adb backup.
+
+   In Android 12 and higher, these attributes have been deprecated and will
+   only apply to cloud backups. You should instead use the attribute
+   android:dataExtractionRules, specifying an @xml resource that configures
+   which files to back up, for cloud backups and for device-to-device
+   transfers, separately. If your minSdkVersion supports older versions,
+   you'll still want to specify an android:fullBackupContent resource if the
+   default behavior is not right for your app.
+
+   https://developer.android.com/about/versions/12/backup-restore#xml-changes
+   https://goo.gle/DataExtractionRules
+
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:713: Warning: Custom view PageSurface is missing constructor used by tools: (Context) or (Context,AttributeSet) or (Context,AttributeSet,int) [ViewConstructor]
+private class PageSurface(context:Context,private val turn:(Boolean)->Unit,private val tap:()->Unit):FrameLayout(context){
+              ~~~~~~~~~~~
+
+   Explanation for issues of type "ViewConstructor":
+   Some layout tools (such as the Android layout editor) need to find a
+   constructor with one of the following signatures:
+   * View(Context context)
+   * View(Context context, AttributeSet attrs)
+   * View(Context context, AttributeSet attrs, int defStyle)
+
+   If your custom view needs to perform initialization which does not apply
+   when used in a layout editor, you can surround the given code with a check
+   to see if View#isInEditMode() is false, since that method will return false
+   at runtime but true within a user interface editor.
+
+app\src\main\java\org\quietreader\MainActivity.kt:436: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+            fun slider(title:String,min:Int,max:Int,current:Int,label:(Int)->String,apply:(Int)->ReadingSettings){val text=ui.text("$title · ${label(current)}",16f,true);panel.addView(text);val bar=SeekBar(this).apply{this.max=max-min;progress=(current-min).coerceIn(0,max-min);contentDescription=title};bar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(b:SeekBar?,p:Int,user:Boolean){text.text="$title · ${label(p+min)}";if(user){val next=apply(p+min);preview.textSize=next.fontSize;preview.setLineSpacing(0f,next.lineSpacing)}};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){save(apply(bar.progress+min))}});panel.addView(bar)}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:625: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+        slider.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(bar:SeekBar?,value:Int,user:Boolean){val index=((value/1000f)*sections.size).toInt().coerceAtMost(sections.lastIndex);label.text="${value/10f}% · ${sections[index].title}"};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){} })
+                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:665: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+        val preview=TextView(this).apply{text="山光悦鸟性，潭影空人心。\n阅读设置会立即预览并保存。";setPadding(dp(12),dp(12),dp(12),dp(12));textSize=settings.fontSize;typeface=ReaderPaginator.face(settings,"body");setTextColor(this@ReaderActivity.foreground);setBackgroundColor(this@ReaderActivity.background)}
+                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+app\src\main\java\org\quietreader\reader\ReaderActivity.kt:683: Warning: Do not concatenate text displayed with setText. Use resource string with placeholders. [SetTextI18n]
+                override fun onProgressChanged(b:SeekBar?,value:Int,user:Boolean){heading.text="$title · ${format(value+min)}";if(title=="字号")preview.textSize=(value+min).toFloat()}
+                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "SetTextI18n":
+   When calling TextView#setText
+   * Never call Number#toString() to format numbers; it will not handle
+   fraction separators and locale-specific digits properly. Consider using
+   String#format with proper format specifications (%d or %f) instead.
+   * Do not pass a string literal (e.g. "Hello") to display text. Hardcoded
+   text can not be properly translated to other languages. Consider using
+   Android resource strings instead.
+   * Do not build messages by concatenating text chunks. Such messages can not
+   be properly translated.
+
+   https://developer.android.com/guide/topics/resources/localization.html
+
+0 errors, 11 warnings

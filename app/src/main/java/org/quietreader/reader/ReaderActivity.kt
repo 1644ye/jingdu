@@ -28,6 +28,7 @@ import android.view.WindowManager
 import android.widget.*
 import com.google.gson.JsonObject
 import org.quietreader.ReaderApp
+import org.quietreader.Ui
 import org.quietreader.core.Anchor
 import org.quietreader.core.Content
 import org.quietreader.core.ReadingSettings
@@ -515,13 +516,15 @@ class ReaderActivity : Activity() {
     override fun onDestroy(){main.removeCallbacksAndMessages(null);worker.shutdown();super.onDestroy()}
 
     private fun applyTheme(){
-        val dark=settings.theme=="dark" || (settings.theme=="system" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK==Configuration.UI_MODE_NIGHT_YES)
+        val custom=if(settings.theme=="custom")Ui(this,settings)else null
+        val dark=custom?.dark ?: (settings.theme=="dark" || (settings.theme=="system" && resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK==Configuration.UI_MODE_NIGHT_YES))
         background=when {dark->Color.rgb(28,29,28);settings.theme=="sepia"->Color.rgb(231,224,201);else->Color.rgb(250,247,239)}
         foreground=if(dark)Color.rgb(220,219,211)else Color.rgb(49,44,37)
         secondary=if(dark)Color.rgb(160,163,154)else Color.rgb(106,97,84)
+        if(custom!=null){background=custom.background;foreground=custom.foreground;secondary=custom.muted}
         root.setBackgroundColor(background);titleView.setTextColor(foreground);status.setTextColor(secondary)
         fun tint(view:View){
-            if(view is Button){view.setTextColor(foreground);view.backgroundTintList=android.content.res.ColorStateList.valueOf(background)}
+            if(view is Button){view.setTextColor(custom?.accentText?:foreground);view.backgroundTintList=android.content.res.ColorStateList.valueOf(custom?.accent?:background)}
             if(view is ViewGroup)for(index in 0 until view.childCount)tint(view.getChildAt(index))
         }
         tint(toolbar);tint(footer)
@@ -674,7 +677,7 @@ class ReaderActivity : Activity() {
             panel.addView(spinner)
         }
         choose("阅读方式",arrayOf("纵向连续滚动","横向分页"),listOf("scroll","paged"),settings.mode){settings.copy(mode=it)}
-        choose("主题",arrayOf("跟随系统","浅色","护眼","深色"),listOf("system","light","sepia","dark"),settings.theme){settings.copy(theme=it)}
+        choose("主题",arrayOf("跟随系统","浅色","护眼","深色","自定义配色"),listOf("system","light","sepia","dark","custom"),settings.theme){settings.copy(theme=it)}
         choose("系统字体",arrayOf("衬线字体","无衬线字体","等宽字体","系统默认"),listOf("serif","sans-serif","monospace","sans"),settings.fontFamily){settings.copy(fontFamily=it)}
         fun slider(title:String,min:Int,max:Int,current:Int,format:(Int)->String,apply:(Int)->ReadingSettings){
             val heading=label("$title · ${format(current)}")

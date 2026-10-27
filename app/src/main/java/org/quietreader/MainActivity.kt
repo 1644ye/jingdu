@@ -65,6 +65,7 @@ class MainActivity : Activity() {
     private var unregisterBack:(()->Unit)?=null
     private var memoryRecoveryReserve:ByteArray?=ByteArray(256*1024)
     private var globalSettings=ReadingSettings()
+    private var appearanceDraft:ReadingSettings?=null
     private var allBooks=emptyList<BookSummary>()
     private var groups=emptyList<ShelfGroup>()
     private var memberships=emptyMap<String,Set<Long>>()
@@ -99,6 +100,8 @@ class MainActivity : Activity() {
         }
         screen=state?.getString("screen")?:intent.getStringExtra("screen")?:"shelf"
         screenBook=state?.getString("bookId")?:intent.getStringExtra("bookId")
+        state?.getStringArrayList("selected")?.let{selected.addAll(it)}
+        appearanceDraft=state?.getString("appearanceDraft")?.let{runCatching{gson.fromJson(it,ReadingSettings::class.java)}.getOrNull()}
         grid=getPreferences(0).getBoolean("grid",true)
         ui=Ui(this);shell("静读");loading("正在打开书库…")
         work({
@@ -113,14 +116,14 @@ class MainActivity : Activity() {
     override fun onResume(){super.onResume();if(resumed && !taskRunning && pendingWrite==null)work({store.settings()}){globalSettings=it;render()};resumed=true}
     override fun onNewIntent(intent:Intent){super.onNewIntent(intent);setIntent(intent);if(!taskRunning){screen=intent.getStringExtra("screen")?:"shelf";screenBook=intent.getStringExtra("bookId");render()}}
     override fun onConfigurationChanged(config:Configuration){super.onConfigurationChanged(config);if(!taskRunning && screen!="import")render()}
-    override fun onSaveInstanceState(out:Bundle){out.putString("screen",if(screen=="import")"shelf"else screen);out.putString("bookId",screenBook);super.onSaveInstanceState(out)}
+    override fun onSaveInstanceState(out:Bundle){out.putString("screen",if(screen=="import")"shelf"else screen);out.putString("bookId",screenBook);out.putStringArrayList("selected",ArrayList(selected));appearanceDraft?.let{out.putString("appearanceDraft",gson.toJson(it))};super.onSaveInstanceState(out)}
     override fun onDestroy(){unregisterBack?.invoke();cancel.set(true);main.removeCallbacksAndMessages(null);worker.shutdown();super.onDestroy()}
     // API 33+ is handled by the registered OnBackInvokedCallback above; this is the API 26-32 fallback.
     @android.annotation.SuppressLint("GestureBackNavigation")
     @Deprecated("Deprecated in Android") override fun onBackPressed(){handleBack()}
     private fun handleBack(){
         if(taskRunning){toast("任务正在进行；可使用页面上的取消按钮。");return}
-        if(screen!="shelf"){screen="shelf";screenBook=null;render()}else finish()
+        if(screen!="shelf")navigate("shelf")else finish()
     }
 
     private fun <T> work(task:()->T,onError:((Exception)->Unit)?=null,done:(T)->Unit){
@@ -135,9 +138,9 @@ class MainActivity : Activity() {
         }
     }
     private fun toast(message:String)=Toast.makeText(this,message,Toast.LENGTH_LONG).show()
-    private fun showError(message:String){AlertDialog.Builder(this).setTitle("操作未完成").setMessage(message).setPositiveButton("知道了",null).show()}
-    private fun navigate(name:String,id:String?=null){if(taskRunning)return;screen=name;screenBook=id;render()}
-    private fun render(){generation++;ui=Ui(this,globalSettings.theme);when(screen){"detail"->detail(screenBook?:return navigate("shelf"));"notes"->notes(screenBook);"groups"->groupsScreen();"poems"->poems();"settings"->settingsScreen();"tools"->toolsScreen();"import"->importPreview();else->shelf()}}
+    private fun showError(message:String){ui.dialog().setTitle("操作未完成").setMessage(message).setPositiveButton("知道了",null).show()}
+    private fun navigate(name:String,id:String?=null){if(taskRunning)return;if(name=="shelf")selected.clear();if(name!="appearance")appearanceDraft=null;screen=name;screenBook=id;render()}
+    private fun render(){generation++;ui=Ui(this,globalSettings);when(screen){"detail"->detail(screenBook?:return navigate("shelf"));"notes"->notes(screenBook);"groups"->groupsScreen();"poems"->poems();"settings"->settingsScreen();"appearance"->appearanceScreen();"manage"->shelf(true);"tools","templates"->toolsScreen();"import"->importPreview();else->shelf()}}
     private fun shell(title:String){
         root=ui.panel(0);root.setBackgroundColor(ui.background)
         root.setOnApplyWindowInsetsListener{v,insets->v.setPadding(insets.systemWindowInsetLeft,insets.systemWindowInsetTop,insets.systemWindowInsetRight,insets.systemWindowInsetBottom);insets}
@@ -153,7 +156,7 @@ class MainActivity : Activity() {
         window.decorView.systemUiVisibility=if(ui.dark)0 else View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
     }
     private fun loading(message:String){body.removeAllViews();body.addView(ui.panel(24).apply{addView(ProgressBar(this@MainActivity));addView(ui.text(message))})}
-    private fun menu(){val labels=arrayOf("导入 JSON","模板与备份","书架分组","全部书签与笔记","收藏的诗作","全局阅读设置");AlertDialog.Builder(this).setTitle("静读").setItems(labels){_,i->when(i){0->pickImport();1->navigate("tools");2->navigate("groups");3->navigate("notes");4->navigate("poems");5->navigate("settings")}}.show()}
+    private fun menu(){val labels=arrayOf("导入 JSON","下载模板","书架管理","应用配色","备份与恢复","书架分组","全部书签与笔记","收藏的诗作","全局阅读设置");ui.dialog().setTitle("更多").setItems(labels){_,i->when(i){0->pickImport();1->navigate("templates");2->navigate("manage");3->navigate("appearance");4->navigate("tools");5->navigate("groups");6->navigate("notes");7->navigate("poems");8->navigate("settings")}}.show()}
     private fun resource(name:String)=checkNotNull(javaClass.classLoader?.getResourceAsStream("protocol/$name")){"模板资源缺失：$name"}.bufferedReader(Charsets.UTF_8).use{it.readText()}
     private fun date(value:Long)=if(value<=0)"尚未阅读"else SimpleDateFormat("MM-dd HH:mm",Locale.CHINA).format(Date(value))
     private fun type(value:String)=if(value=="poetry")"诗集"else"小说"
@@ -165,29 +168,29 @@ class MainActivity : Activity() {
         startActivity(intent)
     }
 
-    private fun shelf(){
-        shell("静读");loading("正在整理书架…");val token=generation
+    private fun shelf(managing:Boolean=screen=="manage"){
+        shell(if(managing)"书架管理"else"静读");loading("正在整理书架…");val token=generation
         work({val books=store.listBooks();ShelfData(books,store.groups(),books.associate{it.id to store.groupIds(it.id)},store.settings())}){data->
             if(token!=generation)return@work
             allBooks=data.books;groups=data.groups;memberships=data.memberships;globalSettings=data.settings
             selected.retainAll(allBooks.map{it.id}.toSet());if(groups.none{it.id==selectedGroup})selectedGroup=null
             body.removeAllViews()
             val panel=ui.panel(10)
-            panel.addView(ui.actions("导入 JSON" to {pickImport()},"下载模板" to {navigate("tools")},(if(grid)"列表显示"else"网格显示") to {grid=!grid;getPreferences(0).edit().putBoolean("grid",grid).apply();shelf()}))
-            allBooks.filter{it.lastRead>0}.maxByOrNull{it.lastRead}?.let{b->panel.addView(ui.button("继续阅读 · ${b.title}"){openReader(b.id)})}
+            panel.addView(ui.actions((if(grid)"列表显示"else"网格显示") to {grid=!grid;getPreferences(0).edit().putBoolean("grid",grid).apply();shelf()}))
+            if(!managing)allBooks.filter{it.lastRead>0}.maxByOrNull{it.lastRead}?.let{b->panel.addView(ui.button("继续阅读 · ${b.title}"){openReader(b.id)})}
             val search=ui.field("搜索书名、作者、标签",query);panel.addView(search)
             val options=ui.row()
             options.addView(ui.spinner(filters,filter){filter=it;filterShelf()},LinearLayout.LayoutParams(0,-2,1f))
             options.addView(ui.spinner(listOf("最近阅读","导入时间","书名"),sort){sort=it;filterShelf()},LinearLayout.LayoutParams(0,-2,1f))
             options.addView(ui.spinner(listOf("全部分组")+groups.map{it.name},groups.indexOfFirst{it.id==selectedGroup}+1){selectedGroup=groups.getOrNull(it-1)?.id;filterShelf()},LinearLayout.LayoutParams(0,-2,1f));panel.addView(options)
-            selectLabel=ui.text("长按书籍进入批量选择",13f);panel.addView(selectLabel)
-            panel.addView(ui.actions("全选当前" to {selected.addAll(filtered.map{it.id});refreshSelection()},"取消选择" to {selected.clear();refreshSelection()},"批量操作" to {batchActions()}))
+            selectLabel=ui.text("",13f);panel.addView(selectLabel)
+            if(managing)panel.addView(ui.actions("全选当前" to {selected.addAll(filtered.map{it.id});refreshSelection()},"取消选择" to {selected.clear();refreshSelection()},"批量操作" to {batchActions()}))
             shelfList=if(grid)GridView(this).apply{numColumns=if(resources.configuration.screenWidthDp>=600)3 else 2;horizontalSpacing=ui.dp(8);verticalSpacing=ui.dp(8);stretchMode=GridView.STRETCH_COLUMN_WIDTH}else ListView(this).apply{dividerHeight=ui.dp(8)}
             panel.addView(shelfList,LinearLayout.LayoutParams(-1,0,1f))
-            val empty=ui.text(if(allBooks.isEmpty())"书架还是空的。导入 JSON，或下载模板开始填写。"else"没有符合条件的书籍。",16f).apply{gravity=Gravity.CENTER}
+            val empty=ui.text(if(allBooks.isEmpty())if(managing)"书架还是空的。返回书架后，可从“更多”导入 JSON 或下载模板。"else"书架还是空的。点击右上角“更多”，导入 JSON 或下载模板。"else"没有符合条件的书籍。",16f).apply{gravity=Gravity.CENTER}
             panel.addView(empty);shelfList!!.emptyView=empty
-            shelfList!!.setOnItemClickListener{_,_,position,_->val b=filtered[position];if(selected.isEmpty())navigate("detail",b.id)else{if(!selected.add(b.id))selected.remove(b.id);refreshSelection()}}
-            shelfList!!.setOnItemLongClickListener{_,_,position,_->val id=filtered[position].id;if(!selected.add(id))selected.remove(id);refreshSelection();true}
+            shelfList!!.setOnItemClickListener{_,_,position,_->val b=filtered[position];if(!managing)navigate("detail",b.id)else{if(!selected.add(b.id))selected.remove(b.id);refreshSelection()}}
+            shelfList!!.setOnItemLongClickListener{_,_,position,_->val id=filtered[position].id;if(!selected.add(id))selected.remove(id);if(managing)refreshSelection()else navigate("manage");true}
             ui.watch(search){query=it;filterShelf()};body.addView(panel);filterShelf()
         }
     }
@@ -202,17 +205,17 @@ class MainActivity : Activity() {
             override fun getView(position:Int,convert:View?,parent:ViewGroup?):View{
                 val b=filtered[position];val card=ui.card()
                 if(b.id in selected)card.background=GradientDrawable().apply{setColor(ui.surface);setStroke(ui.dp(3),ui.accent);cornerRadius=ui.dp(12).toFloat()}
-                val title=ui.text((if(b.id in selected)"✓ "else"")+b.title,if(grid)20f else 18f,true).apply{minHeight=ui.dp(if(grid)80 else 48);maxLines=3;gravity=if(grid)Gravity.CENTER else Gravity.CENTER_VERTICAL;setTextColor(ui.foreground)}
-                card.addView(title);card.addView(ui.text(b.author.ifEmpty{"佚名"},14f));card.addView(ui.text("${type(b.type)} · ${status(b.status)} · ${(b.progress*100).toInt()}%${if(b.favorite)" · ★"else""}${if("示例" in b.tags)" · 示例"else""}",12f));card.addView(ui.text(date(b.lastRead),12f).apply{setTextColor(ui.muted)})
+                val title=ui.text((if(b.id in selected)"✓ "else"")+b.title,if(grid)20f else 18f,true).apply{minHeight=ui.dp(if(grid)80 else 48);maxLines=3;gravity=if(grid)Gravity.CENTER else Gravity.CENTER_VERTICAL;setTextColor(ui.surfaceText)}
+                card.addView(title);card.addView(ui.text(b.author.ifEmpty{"佚名"},14f).apply{setTextColor(ui.surfaceText)});card.addView(ui.text("${type(b.type)} · ${status(b.status)} · ${(b.progress*100).toInt()}%${if(b.favorite)" · ★"else""}${if("示例" in b.tags)" · 示例"else""}",12f).apply{setTextColor(ui.surfaceText)});card.addView(ui.text(date(b.lastRead),12f).apply{setTextColor(ui.surfaceMuted)})
                 card.contentDescription="${b.title}，${b.author}，${type(b.type)}，${status(b.status)}，阅读${(b.progress*100).toInt()}%"
                 return card
             }
         };refreshSelection()
     }
-    private fun refreshSelection(){selectLabel?.text=if(selected.isEmpty())"共 ${filtered.size} 本 · 长按可批量选择"else"已选择 ${selected.size} 本";(shelfList?.adapter as? BaseAdapter)?.notifyDataSetChanged()}
-    private fun batchActions(){if(selected.isEmpty()){toast("请长按书籍或全选当前列表。");return};val ids=selected.toList();AlertDialog.Builder(this).setTitle("操作 ${ids.size} 本书").setItems(arrayOf("加入分组","移出分组","导出内容 JSON","删除书籍")){_,i->when(i){0->chooseGroup(ids,true);1->chooseGroup(ids,false);2->exportBooks(ids);3->deleteBooks(ids)}}.show()}
-    private fun deleteBooks(ids:List<String>){AlertDialog.Builder(this).setTitle("删除 ${ids.size} 本书？").setMessage("将同时删除正文、阅读进度、分组归属、收藏、书签、划线、笔记及单书阅读设置。此操作不能撤销；可先导出完整备份。").setNegativeButton("取消",null).setPositiveButton("删除"){_,_->work({store.deleteBooks(ids)}){selected.removeAll(ids.toSet());navigate("shelf")}}.show()}
-    private fun chooseGroup(ids:List<String>,add:Boolean){work({store.groups()}){items->if(items.isEmpty()){toast("请先创建一个分组。");navigate("groups");return@work};AlertDialog.Builder(this).setTitle(if(add)"加入分组"else"移出分组").setItems(items.map{it.name}.toTypedArray()){_,index->work({store.setMembership(ids,items[index].id,add)}){toast("分组已更新");render()}}.setNegativeButton("取消",null).show()}}
+    private fun refreshSelection(){selectLabel?.text=if(screen!="manage")"共 ${filtered.size} 本"else if(selected.isEmpty())"共 ${filtered.size} 本 · 点击书籍选择"else"已选择 ${selected.size} 本";(shelfList?.adapter as? BaseAdapter)?.notifyDataSetChanged()}
+    private fun batchActions(){if(selected.isEmpty()){toast("请点击书籍或全选当前列表。");return};val ids=selected.toList();ui.dialog().setTitle("操作 ${ids.size} 本书").setItems(arrayOf("加入分组","移出分组","导出内容 JSON","删除书籍")){_,i->when(i){0->chooseGroup(ids,true);1->chooseGroup(ids,false);2->exportBooks(ids);3->deleteBooks(ids)}}.show()}
+    private fun deleteBooks(ids:List<String>){ui.dialog().setTitle("删除 ${ids.size} 本书？").setMessage("将同时删除正文、阅读进度、分组归属、收藏、书签、划线、笔记及单书阅读设置。此操作不能撤销；可先导出完整备份。").setNegativeButton("取消",null).setPositiveButton("删除"){_,_->work({store.deleteBooks(ids)}){selected.removeAll(ids.toSet());navigate("shelf")}}.show()}
+    private fun chooseGroup(ids:List<String>,add:Boolean){work({store.groups()}){items->if(items.isEmpty()){toast("请先创建一个分组。");navigate("groups");return@work};ui.dialog().setTitle(if(add)"加入分组"else"移出分组").setItems(items.map{it.name}.toTypedArray()){_,index->work({store.setMembership(ids,items[index].id,add)}){toast("分组已更新");render()}}.setNegativeButton("取消",null).show()}}
 
     private fun detail(id:String){shell("书籍详情");loading("正在读取目录…");val token=generation
         work({Detail(store.listBooks().firstOrNull{it.id==id}?:error("书籍已删除"),store.sections(id),store.groups(),store.groupIds(id))}){data->
@@ -223,7 +226,7 @@ class MainActivity : Activity() {
             panel.addView(ui.text("阅读 ${(b.progress*100).toInt()}% · ${date(b.lastRead)}",13f))
             panel.addView(ui.actions((if(b.lastRead>0)"继续阅读"else"开始阅读") to {openReader(id)},(if(b.favorite)"取消收藏"else"收藏本书") to {work({store.toggleFavorite(id)}){if(screen=="detail"&&screenBook==id)render()}},"编辑信息" to {editBook(b)}))
             panel.addView(ui.actions("书签与笔记" to {navigate("notes",id)},"导出 JSON" to {exportBooks(listOf(id))},"删除书籍" to {deleteBooks(listOf(id))}))
-            panel.addView(ui.actions("加入分组" to {chooseGroup(listOf(id),true)},"移出分组" to {chooseGroup(listOf(id),false)},"阅读状态" to {AlertDialog.Builder(this).setTitle("阅读状态").setItems(arrayOf("未读","在读","已读")){_,i->work({store.setStatus(id,listOf("unread","reading","read")[i])}){if(screen=="detail"&&screenBook==id)render()}}.show()}))
+            panel.addView(ui.actions("加入分组" to {chooseGroup(listOf(id),true)},"移出分组" to {chooseGroup(listOf(id),false)},"阅读状态" to {ui.dialog().setTitle("阅读状态").setItems(arrayOf("未读","在读","已读")){_,i->work({store.setStatus(id,listOf("unread","reading","read")[i])}){if(screen=="detail"&&screenBook==id)render()}}.show()}))
             panel.addView(ui.text("分组："+data.groups.filter{it.id in data.member}.joinToString("、"){it.name}.ifEmpty{"尚未分组"},13f))
             val search=ui.field("搜索目录或卷名");panel.addView(search)
             val list=ListView(this);list.addHeaderView(panel,null,false);var entries=emptyList<Pair<String,SectionSummary?>>()
@@ -233,18 +236,18 @@ class MainActivity : Activity() {
         }
     }
     private fun editBook(book:BookSummary){val form=ui.panel();val title=ui.field("书名",book.title);val author=ui.field("作者",book.author);val desc=ui.field("简介",book.description,true);val tags=ui.field("标签，以逗号分隔",book.tags.joinToString(","));listOf(title,author,desc,tags).forEach{form.addView(it)}
-        val dialog=AlertDialog.Builder(this).setTitle("编辑书籍信息").setView(ui.scroll(form)).setNegativeButton("取消",null).setPositiveButton("保存",null).create();dialog.setOnShowListener{dialog.getButton(-1).setOnClickListener{if(title.text.isBlank()){title.error="书名不能为空";return@setOnClickListener};work({store.editBook(book.id,title.text.toString(),author.text.toString(),desc.text.toString(),tags.text.toString().split(',', '，').map{it.trim()}.filter{it.isNotEmpty()})}){dialog.dismiss();if(screen=="detail"&&screenBook==book.id)render()}}};dialog.show()}
+        val dialog=ui.dialog().setTitle("编辑书籍信息").setView(ui.scroll(form)).setNegativeButton("取消",null).setPositiveButton("保存",null).create();dialog.setOnShowListener{dialog.getButton(-1).setOnClickListener{if(title.text.isBlank()){title.error="书名不能为空";return@setOnClickListener};work({store.editBook(book.id,title.text.toString(),author.text.toString(),desc.text.toString(),tags.text.toString().split(',', '，').map{it.trim()}.filter{it.isNotEmpty()})}){dialog.dismiss();if(screen=="detail"&&screenBook==book.id)render()}}};dialog.show()}
     private fun textAdapter(labels:List<String>,enabled:List<Boolean>?=null)=object:BaseAdapter(){override fun getCount()=labels.size;override fun getItem(position:Int)=labels[position];override fun getItemId(position:Int)=position.toLong();override fun isEnabled(position:Int)=enabled?.get(position)?:true;override fun getView(position:Int,convert:View?,parent:ViewGroup?):View=ui.text(labels[position],16f,enabled?.get(position)==false).apply{setPadding(ui.dp(16),ui.dp(14),ui.dp(16),ui.dp(14));minHeight=ui.dp(52)}}
 
     private fun groupsScreen(){shell("书架分组");loading("读取分组…");val token=generation
-        work({store.groups()}){items->if(token!=generation)return@work;val panel=ui.panel();panel.addView(ui.button("创建分组"){nameDialog("创建分组",""){name->work({store.createGroup(name)}){if(screen=="groups")render()}}});panel.addView(ui.text("一本书可以加入多个分组。删除分组不会删除书籍。",13f));val list=ListView(this);list.adapter=textAdapter(items.map{it.name});list.setOnItemClickListener{_,_,index,_->val group=items[index];AlertDialog.Builder(this).setTitle(group.name).setItems(arrayOf("查看分组书籍","重命名","删除分组")){_,action->when(action){0->{selectedGroup=group.id;navigate("shelf")};1->nameDialog("重命名分组",group.name){name->work({store.renameGroup(group.id,name)}){if(screen=="groups")render()}};2->AlertDialog.Builder(this).setTitle("删除分组？").setMessage("仅删除分组与归属关系，书籍和笔记会保留。").setNegativeButton("取消",null).setPositiveButton("删除"){_,_->work({store.deleteGroup(group.id)}){if(screen=="groups")render()}}.show()}}.show()};panel.addView(list,LinearLayout.LayoutParams(-1,0,1f));body.removeAllViews();body.addView(panel)}
+        work({store.groups()}){items->if(token!=generation)return@work;val panel=ui.panel();panel.addView(ui.button("创建分组"){nameDialog("创建分组",""){name->work({store.createGroup(name)}){if(screen=="groups")render()}}});panel.addView(ui.text("一本书可以加入多个分组。删除分组不会删除书籍。",13f));val list=ListView(this);list.adapter=textAdapter(items.map{it.name});list.setOnItemClickListener{_,_,index,_->val group=items[index];ui.dialog().setTitle(group.name).setItems(arrayOf("查看分组书籍","重命名","删除分组")){_,action->when(action){0->{selectedGroup=group.id;navigate("shelf")};1->nameDialog("重命名分组",group.name){name->work({store.renameGroup(group.id,name)}){if(screen=="groups")render()}};2->ui.dialog().setTitle("删除分组？").setMessage("仅删除分组与归属关系，书籍和笔记会保留。").setNegativeButton("取消",null).setPositiveButton("删除"){_,_->work({store.deleteGroup(group.id)}){if(screen=="groups")render()}}.show()}}.show()};panel.addView(list,LinearLayout.LayoutParams(-1,0,1f));body.removeAllViews();body.addView(panel)}
     }
-    private fun nameDialog(title:String,value:String,save:(String)->Unit){val input=ui.field("分组名称",value);val dialog=AlertDialog.Builder(this).setTitle(title).setView(input).setNegativeButton("取消",null).setPositiveButton("保存",null).create();dialog.setOnShowListener{dialog.getButton(-1).setOnClickListener{if(input.text.isBlank())input.error="名称不能为空"else{save(input.text.toString());dialog.dismiss()}}};dialog.show()}
+    private fun nameDialog(title:String,value:String,save:(String)->Unit){val input=ui.field("分组名称",value);val dialog=ui.dialog().setTitle(title).setView(input).setNegativeButton("取消",null).setPositiveButton("保存",null).create();dialog.setOnShowListener{dialog.getButton(-1).setOnClickListener{if(input.text.isBlank())input.error="名称不能为空"else{save(input.text.toString());dialog.dismiss()}}};dialog.show()}
     private fun notes(bookId:String?){shell(if(bookId==null)"书签与笔记"else"本书书签与笔记");val token=generation;val panel=ui.panel();val search=ui.field("搜索摘录或笔记");panel.addView(search);val list=ListView(this);panel.addView(list,LinearLayout.LayoutParams(-1,0,1f));val empty=ui.text("还没有记录。阅读时选择文字，可划线或添加笔记。");panel.addView(empty);list.emptyView=empty;body.addView(panel);var rows=emptyList<AnnotationRecord>();var request=0
         fun refresh(q:String){val current=++request;work({store.annotations(bookId,q) to store.listBooks().associateBy{it.id}}){(items,books)->if(token!=generation||current!=request)return@work;rows=items;list.adapter=textAdapter(items.map{"${when(it.kind){"bookmark"->"书签";"highlight"->"划线";else->"笔记"}} · ${books[it.anchor.bookId]?.title.orEmpty()}${if(it.anchor.orphaned)" · 原位置已变化"else""}\n${it.anchor.quote.take(180)}${if(it.note.isEmpty())""else"\n${it.note}"}\n${date(it.createdAt)}"})}}
-        list.setOnItemClickListener{_,_,index,_->val record=rows[index];val options=if(record.anchor.orphaned)arrayOf("编辑笔记","删除记录")else arrayOf("跳回原文","编辑笔记","删除记录");AlertDialog.Builder(this).setTitle(if(record.anchor.orphaned)"原位置已变化，笔记已保留"else"阅读记录").setItems(options){_,action->when(options[action]){"跳回原文"->openReader(record.anchor.bookId,anchor=record.anchor);"编辑笔记"->{val input=ui.field("笔记正文",record.note,true);AlertDialog.Builder(this).setTitle("编辑笔记").setView(input).setNegativeButton("取消",null).setPositiveButton("保存"){_,_->work({store.editAnnotation(record.id,input.text.toString())}){refresh(search.text.toString())}}.show()};else->AlertDialog.Builder(this).setTitle("删除这条记录？").setNegativeButton("取消",null).setPositiveButton("删除"){_,_->work({store.deleteAnnotation(record.id)}){refresh(search.text.toString())}}.show()}}.show()};ui.watch(search){refresh(it)};refresh("")
+        list.setOnItemClickListener{_,_,index,_->val record=rows[index];val options=if(record.anchor.orphaned)arrayOf("编辑笔记","删除记录")else arrayOf("跳回原文","编辑笔记","删除记录");ui.dialog().setTitle(if(record.anchor.orphaned)"原位置已变化，笔记已保留"else"阅读记录").setItems(options){_,action->when(options[action]){"跳回原文"->openReader(record.anchor.bookId,anchor=record.anchor);"编辑笔记"->{val input=ui.field("笔记正文",record.note,true);ui.dialog().setTitle("编辑笔记").setView(input).setNegativeButton("取消",null).setPositiveButton("保存"){_,_->work({store.editAnnotation(record.id,input.text.toString())}){refresh(search.text.toString())}}.show()};else->ui.dialog().setTitle("删除这条记录？").setNegativeButton("取消",null).setPositiveButton("删除"){_,_->work({store.deleteAnnotation(record.id)}){refresh(search.text.toString())}}.show()}}.show()};ui.watch(search){refresh(it)};refresh("")
     }
-    private fun poems(){shell("收藏的诗作");loading("读取收藏…");val token=generation;work({store.favoritePoems() to store.listBooks().associateBy{it.id}}){(items,books)->if(token!=generation)return@work;body.removeAllViews();if(items.isEmpty()){body.addView(ui.text("还没有收藏诗作。在诗集阅读页面的“更多”中收藏。"));return@work};val list=ListView(this);list.adapter=textAdapter(items.map{"${it.title}\n${books[it.bookId]?.title.orEmpty()}"});list.setOnItemClickListener{_,_,i,_->openReader(items[i].bookId,items[i].poemId)};list.setOnItemLongClickListener{_,_,i,_->AlertDialog.Builder(this).setTitle("取消收藏 ${items[i].title}？").setNegativeButton("取消",null).setPositiveButton("取消收藏"){_,_->work({store.togglePoemFavorite(items[i].bookId,items[i].poemId)}){poems()}}.show();true};body.addView(list)}}
+    private fun poems(){shell("收藏的诗作");loading("读取收藏…");val token=generation;work({store.favoritePoems() to store.listBooks().associateBy{it.id}}){(items,books)->if(token!=generation)return@work;body.removeAllViews();if(items.isEmpty()){body.addView(ui.text("还没有收藏诗作。在诗集阅读页面的“更多”中收藏。"));return@work};val list=ListView(this);list.adapter=textAdapter(items.map{"${it.title}\n${books[it.bookId]?.title.orEmpty()}"});list.setOnItemClickListener{_,_,i,_->openReader(items[i].bookId,items[i].poemId)};list.setOnItemLongClickListener{_,_,i,_->ui.dialog().setTitle("取消收藏 ${items[i].title}？").setNegativeButton("取消",null).setPositiveButton("取消收藏"){_,_->work({store.togglePoemFavorite(items[i].bookId,items[i].poemId)}){poems()}}.show();true};body.addView(list)}}
 
     private fun pickImport(){
         if(taskRunning)return
@@ -367,7 +370,7 @@ class MainActivity : Activity() {
                 reports.add("${file.name}：新建 ${result.imported}，更新 ${result.updated}，副本 ${result.copied}，跳过 ${result.skipped}。")
             }catch(e:ImportCancelledException){reports.add("${file.name}：取消，当前文件已回滚。其后 ${files.size-index-1} 个文件未处理。");break}
             catch(e:Exception){reports.add("${file.name}：失败，未保存该文件。${e.message}")}
-        };stagedFiles.forEach{it.delete()};reports.joinToString("\n\n")},onError={e->taskRunning=false;showError("导入任务中断：${e.message}。请查看书架，已完成文件仍保留。");navigate("shelf")}){report->taskRunning=false;importFiles=emptyList();screen="shelf";render();AlertDialog.Builder(this).setTitle("实际导入结果").setMessage(report).setPositiveButton("查看书架",null).show()}
+        };stagedFiles.forEach{it.delete()};reports.joinToString("\n\n")},onError={e->taskRunning=false;showError("导入任务中断：${e.message}。请查看书架，已完成文件仍保留。");navigate("shelf")}){report->taskRunning=false;importFiles=emptyList();screen="shelf";render();ui.dialog().setTitle("实际导入结果").setMessage(report).setPositiveButton("查看书架",null).show()}
     }
 
     private fun createDocument(name:String,maxBytes:Int=Protocol.MAX_FILE_BYTES,write:(java.io.OutputStream)->Unit){
@@ -388,10 +391,13 @@ class MainActivity : Activity() {
         }
     }
     private fun copyText(value:String,label:String){(getSystemService(Context.CLIPBOARD_SERVICE)as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label,value));toast("已复制$label")}
-    private fun toolsScreen(){shell("模板与备份");val panel=ui.panel(16)
+    private fun toolsScreen(){val templates=screen=="templates";shell(if(templates)"下载模板"else"备份与恢复");val panel=ui.panel(16)
+        if(templates){
         panel.addView(ui.text("填写自己的书",23f,true));panel.addView(ui.text("下载或复制模板，使用 UTF-8 保存。示例明确标记为示例，只初始化一次，删除后不会自动回来。",14f))
         listOf("诗集最简模板" to "poetry-template.json","小说最简模板" to "novel-template.json","完整诗集示例" to "poetry-example.json","完整小说示例" to "novel-example.json","JSON Schema" to "ebook-library-v1.schema.json").forEach{(title,file)->panel.addView(ui.text(title,17f,true));panel.addView(ui.actions("下载" to {createDocument(file){out->out.write(resource(file).toByteArray(Charsets.UTF_8))}},"复制" to {work({resource(file)}){copyText(it,title)}}))}
         panel.addView(ui.text("导入规则",21f,true));panel.addView(ui.text("单文件 ≤32 MiB；一批 ≤16 个文件、累计 ≤64 MiB。JSON 嵌套 ≤32 层。书籍 ID 唯一，内部 ID 在各书内跨层级唯一。未知字段会警告并忽略。单篇章正文序列化 ≤1 MiB，元数据 ≤256 KiB。内容导出只包含正文；阅读记录请使用完整备份。",14f))
+        body.addView(ui.scroll(panel));return
+        }
         panel.addView(ui.button("导出全库内容 JSON"){work({store.listBooks().map{it.id}}){exportBooks(it)}})
         panel.addView(ui.text("备份你的阅读生活",23f,true));panel.addView(ui.text("完整备份包含正文、进度、分组、收藏、书签、划线、笔记及全局/单书设置。恢复采用整体替换，开始前会保存当前数据的保护备份。完整备份格式上限 128 MiB；实际可处理容量还受设备可用内存限制，内存不足会提示缩小文件。超限导出会明确失败。",14f))
         panel.addView(ui.button("导出完整备份"){createDocument("静读-完整备份.json",128*1024*1024){out->out.writer(Charsets.UTF_8).use{gson.toJson(store.backup(),it)}}})
@@ -399,20 +405,20 @@ class MainActivity : Activity() {
         panel.addView(ui.button("导出恢复前保护备份"){chooseRecovery()})
         body.addView(ui.scroll(panel))
     }
-    private fun chooseRecovery(){work({File(filesDir,"recovery").listFiles().orEmpty().filter{it.extension=="json"}.sortedByDescending{it.lastModified()}}){files->if(files.isEmpty()){toast("还没有恢复前保护备份。");return@work};AlertDialog.Builder(this).setTitle("选择保护备份").setItems(files.map{it.name}.toTypedArray()){_,index->val file=files[index];createDocument(file.name,128*1024*1024){out->file.inputStream().use{it.copyTo(out)}}}.setNegativeButton("取消",null).show()}}
+    private fun chooseRecovery(){work({File(filesDir,"recovery").listFiles().orEmpty().filter{it.extension=="json"}.sortedByDescending{it.lastModified()}}){files->if(files.isEmpty()){toast("还没有恢复前保护备份。");return@work};ui.dialog().setTitle("选择保护备份").setItems(files.map{it.name}.toTypedArray()){_,index->val file=files[index];createDocument(file.name,128*1024*1024){out->file.inputStream().use{it.copyTo(out)}}}.setNegativeButton("取消",null).show()}}
     private fun prepareRestore(uri:Uri){taskRunning=true;cancel.set(false);progressScreen("校验完整备份","正在读取并核对关联关系…")
         work({val(text,size)=readUtf8(uri,128*1024*1024){cancel.get()};if(cancel.get())throw ImportCancelledException();val backup=parseBackup(text);val errors=store.validateBackup(backup);require(errors.isEmpty()){errors.joinToString("\n")};backup},onError={e->taskRunning=false;showError("恢复尚未开始，原数据未改变。\n${e.message}");navigate("tools")}){backup->
             taskRunning=false;navigate("tools");if(cancel.get()){toast("已取消，原数据未改变。");return@work}
             val books=backup.getAsJsonObject("content").getAsJsonArray("books").size();val notes=backup.getAsJsonArray("annotations").size();val groups=backup.getAsJsonArray("groups").size()
-            AlertDialog.Builder(this).setTitle("整体替换恢复？").setMessage("备份包含 $books 本书、$notes 条阅读记录、$groups 个分组。\n\n恢复会整体替换当前书库及设置。开始前自动生成当前数据的可恢复保护备份；失败会回滚。恢复写入阶段不能取消。").setNegativeButton("取消",null).setPositiveButton("确认替换恢复"){_,_->
+            ui.dialog().setTitle("整体替换恢复？").setMessage("备份包含 $books 本书、$notes 条阅读记录、$groups 个分组。\n\n恢复会整体替换当前书库及设置。开始前自动生成当前数据的可恢复保护备份；失败会回滚。恢复写入阶段不能取消。").setNegativeButton("取消",null).setPositiveButton("确认替换恢复"){_,_->
                 taskRunning=true;progressScreen("恢复备份","正在保护现有数据并恢复…",false)
                 var restoredFile:File?=null
                 work({restoredFile=store.restoreBackup(backup);store.settings()},onError={e->
                     taskRunning=false
                     val committed=restoredFile
-                    if(committed!=null){recoveryFile=committed;selected.clear();navigate("shelf");showError("数据已恢复，但界面刷新未完成：${e.message}\n恢复前保护备份仍保存在应用中，可在模板与备份页面导出。")}
+                    if(committed!=null){recoveryFile=committed;selected.clear();navigate("shelf");showError("数据已恢复，但界面刷新未完成：${e.message}\n恢复前保护备份仍保存在应用中，可在“更多 → 备份与恢复”页面导出。")}
                     else{navigate("tools");showError("恢复未完成，原书库未被替换：${e.message}")}
-                }){settings->val file=checkNotNull(restoredFile);recoveryFile=file;globalSettings=settings;taskRunning=false;selected.clear();navigate("shelf");AlertDialog.Builder(this).setTitle("恢复完成").setMessage("已恢复 $books 本书及关联记录。恢复前的保护备份已保存在应用中，可立即导出到你选择的位置。").setNegativeButton("稍后",null).setPositiveButton("导出保护备份"){_,_->createDocument(file.name,128*1024*1024){out->file.inputStream().use{it.copyTo(out)}}}.show()}
+                }){settings->val file=checkNotNull(restoredFile);recoveryFile=file;globalSettings=settings;taskRunning=false;selected.clear();navigate("shelf");ui.dialog().setTitle("恢复完成").setMessage("已恢复 $books 本书及关联记录。恢复前的保护备份已保存在应用中，可立即导出到你选择的位置。").setNegativeButton("稍后",null).setPositiveButton("导出保护备份"){_,_->createDocument(file.name,128*1024*1024){out->file.inputStream().use{it.copyTo(out)}}}.show()}
             }.show()
         }
     }
@@ -426,12 +432,20 @@ class MainActivity : Activity() {
         reader.use{val value=read(0);require(value.isJsonObject&&reader.peek()==JsonToken.END_DOCUMENT){"备份必须是一个完整 JSON 对象。"};return value.asJsonObject}
     }
 
+    private fun appearanceScreen(){
+        shell("应用配色")
+        val editor=AppearanceEditor(this,appearanceDraft?:globalSettings,{appearanceDraft=it}){value->
+            work({store.saveSettings(value)}){globalSettings=value;appearanceDraft=null;navigate("shelf");toast("应用配色已保存")}
+        }
+        body.addView(ui.scroll(editor))
+    }
+
     private fun settingsScreen(){shell("全局阅读设置");loading("读取设置…");val token=generation
         work({store.settings()}){initial->if(token!=generation)return@work;var value=initial;val panel=ui.panel(16);val preview=ui.text("山光悦鸟性，潭影空人心。\n设置会立即预览并保存。",value.fontSize).apply{typeface=Typeface.create(value.fontFamily,Typeface.NORMAL);setLineSpacing(0f,value.lineSpacing)};panel.addView(preview);panel.addView(ui.text("适用于未单独设置的书籍。单书覆盖可在阅读设置中恢复为全局。",13f))
-            fun save(next:ReadingSettings){value=next;globalSettings=next;preview.textSize=value.fontSize;preview.typeface=Typeface.create(value.fontFamily,Typeface.NORMAL);preview.setLineSpacing(0f,value.lineSpacing);val colors=Ui(this,next.theme);preview.setBackgroundColor(colors.background);preview.setTextColor(colors.foreground);work({store.saveSettings(next)}){}}
+            fun save(next:ReadingSettings){value=next;globalSettings=next;preview.textSize=value.fontSize;preview.typeface=Typeface.create(value.fontFamily,Typeface.NORMAL);preview.setLineSpacing(0f,value.lineSpacing);val colors=Ui(this,next);preview.setBackgroundColor(colors.background);preview.setTextColor(colors.foreground);work({store.saveSettings(next)}){}}
             fun choice(title:String,labels:List<String>,values:List<String>,current:String,apply:(String)->ReadingSettings){panel.addView(ui.text(title,16f,true));panel.addView(ui.spinner(labels,values.indexOf(current).coerceAtLeast(0)){save(apply(values[it]))})}
             choice("阅读方式",listOf("纵向连续滚动","横向分页"),listOf("scroll","paged"),value.mode){value.copy(mode=it)}
-            choice("主题",listOf("跟随系统","浅色","护眼","深色"),listOf("system","light","sepia","dark"),value.theme){value.copy(theme=it)}
+            choice("主题",listOf("跟随系统","浅色","护眼","深色","自定义配色"),listOf("system","light","sepia","dark","custom"),value.theme){value.copy(theme=it)}
             choice("系统字体",listOf("衬线字体","无衬线字体","等宽字体"),listOf("serif","sans-serif","monospace"),value.fontFamily){value.copy(fontFamily=it)}
             fun slider(title:String,min:Int,max:Int,current:Int,label:(Int)->String,apply:(Int)->ReadingSettings){val text=ui.text("$title · ${label(current)}",16f,true);panel.addView(text);val bar=SeekBar(this).apply{this.max=max-min;progress=(current-min).coerceIn(0,max-min);contentDescription=title};bar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(b:SeekBar?,p:Int,user:Boolean){text.text="$title · ${label(p+min)}";if(user){val next=apply(p+min);preview.textSize=next.fontSize;preview.setLineSpacing(0f,next.lineSpacing)}};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){save(apply(bar.progress+min))}});panel.addView(bar)}
             slider("字号",14,48,value.fontSize.toInt(),{"$it sp"}){value.copy(fontSize=it.toFloat())};slider("行距",10,24,(value.lineSpacing*10).toInt(),{"${it/10f} 倍"}){value.copy(lineSpacing=it/10f)};slider("段间距",0,40,value.paragraphSpacing.toInt(),{"$it dp"}){value.copy(paragraphSpacing=it.toFloat())};slider("左右边距",8,64,value.margin.toInt(),{"$it dp"}){value.copy(margin=it.toFloat())}

@@ -1,4 +1,4 @@
-param([string]$Version='1.0.0')
+param([string]$Version='1.0.1')
 $ErrorActionPreference='Stop'
 if($Version -notmatch '^\d+\.\d+\.\d+$') {throw '版本号应为数字形式，例如 1.0.0。'}
 $projectRoot=[IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
@@ -32,7 +32,7 @@ foreach($name in $rootFiles) {$sourceFiles.Add((Get-Item -LiteralPath (Join-Path
 foreach($directory in @('app/src','core/src','gradle','docs','tools','test-data')) {
     Get-ChildItem -LiteralPath (Join-Path $projectRoot $directory) -Recurse -File | ForEach-Object {$sourceFiles.Add($_)}
 }
-foreach($name in @('artifacts/instrumentation-final.txt','artifacts/performance-result.json','artifacts/device-log.txt','artifacts/first-launch.png')) {
+foreach($name in @('artifacts/instrumentation-final.txt','artifacts/performance-result.json','artifacts/device-log.txt','artifacts/first-launch.png','artifacts/shelf-1-0-1.png')) {
     $sourceFiles.Add((Get-Item -LiteralPath (Join-Path $projectRoot $name)))
 }
 foreach($directory in @('artifacts/verification','artifacts/visual')) {

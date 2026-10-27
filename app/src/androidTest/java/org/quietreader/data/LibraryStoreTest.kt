@@ -167,6 +167,29 @@ class LibraryStoreTest : AndroidTestCase() {
         protected.delete()
     }
 
+    fun testCustomColorsPersistBackupAndLegacySettingsStillRestore() {
+        val custom=ReadingSettings(theme="custom",customBackground="#102030",customSurface="#F2E5D5",customAccent="#FFFF40")
+        store.saveSettings(custom)
+        store.close();store=LibraryStore(context,databaseName)
+        assertEquals(custom,store.settings())
+        val backup=store.backup()
+        assertTrue(store.validateBackup(backup).isEmpty())
+        store.saveSettings(ReadingSettings())
+        store.restoreBackup(backup).delete()
+        assertEquals(custom,store.settings())
+        val legacy=backup.deepCopy()
+        val settings=legacy.getAsJsonArray("settings")[0].asJsonObject.getAsJsonObject("settings")
+        settings.addProperty("theme","sepia")
+        listOf("customBackground","customSurface","customAccent").forEach{settings.remove(it)}
+        assertTrue(store.validateBackup(legacy).isEmpty())
+        store.restoreBackup(legacy).delete()
+        assertEquals(ReadingSettings(theme="sepia"),store.settings())
+        settings.addProperty("customAccent","not-a-color")
+        assertTrue(store.validateBackup(legacy).any{it.contains("customAccent")})
+        try {store.saveSettings(custom.copy(customBackground="#123"));fail("无效颜色不应写入")}catch(_:IllegalArgumentException){}
+        assertEquals(ReadingSettings(theme="sepia"),store.settings())
+    }
+
     fun testRestoreFailureRollsBackExistingData() {
         store.importFile(Protocol.wrap(listOf(novel("replacement"))),emptyMap())
         val replacement=store.backup()

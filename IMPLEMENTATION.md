@@ -2,6 +2,8 @@
 
 完整范围见 REQUIREMENTS.md。2026-10-26 用户确认继续，采用新开发路线。
 
+2026-10-27 更新至1.0.1：导入与模板移到“更多”，批量控件移到“更多 → 书架管理”，增加HEX/RGB应用配色、预览、持久化及备份兼容。当前36项设备测试、31项核心测试、18项独立Schema检查通过；Lint 0错误/14警告。详细证据见ACCEPTANCE.md的1.0.1章节，下列初版执行记录保留历史数值。
+
 ## 重要决定
 - Android 离线应用，Kotlin + 原生 View/TextView/StaticLayout + SQLiteOpenHelper + Gson。
 - 使用平台文本测量和选择能力；数据库直接使用 SQLite 外键/事务，代替评估阶段建议的 Compose/Room。产品范围不变。

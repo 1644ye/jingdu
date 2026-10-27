@@ -1,3 +1,3 @@
-193809d9ce7ea5f1859b9c1fdadc1a745b871362dddddf952a32686efcccfd45  QuietReader-1.0.0-debug.apk
-02e352e4a78e9752a24083ed7ee3b520deb5e65919eb7059ab043c72c137e176  QuietReader-1.0.0-source.zip
-1bd09567d5b7e63952c966614b1c035206f950f9fc5a6636bd33a0adb6365c52  QuietReader-1.0.0-templates.zip
+6a89e402feeb6c0463649fcf160b5a20a959fca8667e5bdc72c1bd88a7b1f03b  QuietReader-1.0.1-debug.apk
+c69b25e5e94ed1e3d5570baa088a01adafd6f5b7dc4331f9261f8127117828f8  QuietReader-1.0.1-source.zip
+655eb0bcecf882693469a1bdfebd0b0c772949269512728b29b3dae68162e5ea  QuietReader-1.0.1-templates.zip

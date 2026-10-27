@@ -73,7 +73,7 @@ class MainActivityFlowTest:ActivityInstrumentationTestCase2<MainActivity>(MainAc
         assertNull(main.intent.getStringExtra("bookId"))
         assertTrue(onUi{all(main.window.decorView).filterIsInstance<TextView>().any{it.text.contains("适用于未单独设置的书籍")}})
         instrumentation.runOnMainSync{all(main.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="保存并返回书架"}.performClick()}
-        await("保存后返回实际书架"){onUi{all(main.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="导入 JSON"}}}
+        await("保存后返回实际书架"){onUi{all(main.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="更多"}}}
     }
 
     private fun all(view:View):List<View> = buildList{add(view);if(view is ViewGroup)for(i in 0 until view.childCount)addAll(all(view.getChildAt(i)))}

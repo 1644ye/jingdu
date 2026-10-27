@@ -578,7 +578,11 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
             if(n == null || !n.isFinite() || n < min || n > max) add("$key 必须在 $min 至 $max 之间")
         }
         val mode=text("mode"); if(mode != null && mode !in setOf("scroll","page","paged")) add("mode 不受支持")
-        val theme=text("theme"); if(theme != null && theme !in setOf("system","light","sepia","dark")) add("theme 不受支持")
+        val theme=text("theme"); if(theme != null && theme !in setOf("system","light","sepia","dark","custom")) add("theme 不受支持")
+        // Optional fields preserve compatibility with backups written before custom palettes.
+        listOf("customBackground","customSurface","customAccent").forEach { key ->
+            if(obj.has(key)) text(key)?.let { if(!it.matches(Regex("#[0-9a-fA-F]{6}"))) add("$key 必须为 #RRGGBB 六位颜色值") }
+        }
         text("fontFamily")?.let { if(it.length>256) add("fontFamily 太长") }
         number("fontSize",12.0,64.0); number("lineSpacing",1.0,3.0); number("paragraphSpacing",0.0,80.0); number("margin",0.0,120.0)
         listOf("keepAwake","indent","showOriginal","showPinyin","showTranslation","showNotes","showAnalysis").forEach { key ->

@@ -40,6 +40,20 @@ for path in sorted((ROOT / 'test-data/generated').glob('*.json')):
         passed += 1
 backup_schema = resources / 'ebook-backup-v1.schema.json'
 if backup_schema.exists():
-    Draft202012Validator.check_schema(json.loads(backup_schema.read_text(encoding='utf-8')))
+    backup = json.loads(backup_schema.read_text(encoding='utf-8'))
+    Draft202012Validator.check_schema(backup)
     passed += 1
+    settings_validator = Draft202012Validator({'$ref': '#/$defs/readingSettings', '$defs': backup['$defs']})
+    legacy_settings = dict(mode='scroll', fontSize=22, lineSpacing=1.5, paragraphSpacing=16,
+        margin=24, fontFamily='serif', theme='system', keepAwake=False, indent=True,
+        showOriginal=True, showPinyin=False, showTranslation=False, showNotes=False, showAnalysis=False)
+    settings_validator.validate(legacy_settings)
+    passed += 1
+    custom_settings = dict(legacy_settings, theme='custom', customBackground='#102030',
+        customSurface='#F2E5D5', customAccent='#FFFF40')
+    settings_validator.validate(custom_settings)
+    passed += 1
+    for color in ('not-a-color', None):
+        assert not settings_validator.is_valid(dict(custom_settings, customAccent=color))
+        passed += 1
 print(f'Independent JSON Schema checks passed: {passed}')

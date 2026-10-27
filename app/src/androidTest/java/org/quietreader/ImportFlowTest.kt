@@ -8,18 +8,26 @@ import android.content.IntentFilter
 import android.graphics.Rect
 import android.net.Uri
 import android.os.SystemClock
+import android.os.Bundle
+import android.graphics.Color
+import android.graphics.Bitmap
 import android.test.ActivityInstrumentationTestCase2
 import android.view.View
 import android.view.ViewGroup
 import android.view.MotionEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.TextView
+import android.widget.Button
+import android.widget.EditText
+import android.widget.AbsListView
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import org.quietreader.core.Anchor
 import org.quietreader.core.Content
 import org.quietreader.core.Protocol
+import org.quietreader.core.ReadingSettings
 import org.quietreader.reader.ReaderPositions
+import org.quietreader.reader.ReaderActivity
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
@@ -132,7 +140,7 @@ class ImportFlowTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivi
         assertFalse("内容文件不应混入阅读记录", content.document!!.has("annotations"))
         clickText("返回书架")
         clickText("更多")
-        clickText("模板与备份")
+        clickText("备份与恢复")
 
         val backupFile = file("exported-backup.json")
         selectDocument("导出完整备份", backupFile, Intent.ACTION_CREATE_DOCUMENT)
@@ -163,15 +171,101 @@ class ImportFlowTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivi
         // The recovery file is also reachable from the completion dialog, not just on disk.
         val protectionFile = file("before-restore.json")
         selectDocument("导出保护备份", protectionFile, Intent.ACTION_CREATE_DOCUMENT)
-        await("应能实际导出恢复前保护备份") { protectionFile.length() > 0 && hasText("导入 JSON") }
+        await("应能实际导出恢复前保护备份") { protectionFile.length() > 0 && hasText("更多") }
         val protection = JsonParser.parseString(protectionFile.readText(Charsets.UTF_8)).asJsonObject
         assertEquals(emptyList<String>(), store.validateBackup(protection))
         assertFalse(protection.getAsJsonObject("content").getAsJsonArray("books").any { it.asJsonObject.get("id").asString == fixtureId })
     }
 
-    private fun start(expected: String = "导入 JSON") {
+    fun testMoreMenuTemplateDownloadAndShelfManagement() {
+        store.importFile(Protocol.wrap(listOf(book())))
+        start()
+        val homeButtons=onUi{all(main!!.window.decorView).filterIsInstance<Button>().map{it.text.toString()}}
+        listOf("导入 JSON","下载模板","全选当前","取消选择","批量操作").forEach{assertFalse("首页不应显示 $it",it in homeButtons)}
+        clickText("更多")
+        listOf("导入 JSON","下载模板","书架管理","应用配色").forEach{assertTrue("更多应有 $it",hasText(it))}
+        clickText("下载模板")
+        await("下载模板应打开可操作页面"){hasText("诗集最简模板")}
+        val template=file("template.json")
+        selectDocument("下载",template,Intent.ACTION_CREATE_DOCUMENT)
+        await("移动后仍能实际下载模板"){template.length()>0 && hasText("诗集最简模板")}
+        assertTrue(Protocol.parse(template.readText(),"template.json").valid)
+        clickText("返回书架");clickText("更多");clickText("书架管理")
+        await("管理页面应有批量控制"){hasText("全选当前")&&hasText("取消选择")&&hasText("批量操作")}
+        onUi{all(main!!.window.decorView).filterIsInstance<EditText>().first{it.hint.toString()=="搜索书名、作者、标签"}.setText(fixtureTitle)}
+        await("应只筛选出测试书"){onUi{all(main!!.window.decorView).filterIsInstance<AbsListView>().single().adapter.count==1}}
+        clickText("全选当前");await("全选作用于当前筛选结果"){hasText("已选择 1 本")}
+        clickText("取消选择");assertTrue(hasText("共 1 本 · 点击书籍选择"))
+        onUi{val list=all(main!!.window.decorView).filterIsInstance<AbsListView>().single();list.performItemClick(list.getChildAt(0),0,list.adapter.getItemId(0))}
+        await("取消选择后点击书籍仍应选择而非打开详情"){hasText("已选择 1 本")}
+        clickText("批量操作");clickText("删除书籍");await("删除仍须确认"){hasText("删除 1 本书？")};clickText("取消")
+        assertNotNull(store.book(fixtureId))
+        capture("bookshelf-management")
+        clickText("返回书架");assertFalse(hasText("批量操作"))
+    }
+
+    fun testCustomPaletteHexRgbSaveAndRecreate() {
+        store.saveSettings(ReadingSettings())
+        store.importFile(Protocol.wrap(listOf(book())))
+        start();clickText("更多");clickText("应用配色")
+        await("应显示自由配色编辑器"){hasText("背景颜色  #F8F6F0")}
+        clickText("背景颜色  #F8F6F0")
+        setColorInput("背景颜色","#NOPE")
+        clickText("应用")
+        assertTrue("无效色值应保留编辑器",withAccessibilityNode({it.isEditable&&it.contentDescription?.toString()=="背景颜色 色值"}){true}==true)
+        setColorInput("背景颜色","#102030");clickText("应用")
+        clickText("卡片颜色  #FFFDF7");setColorInput("卡片颜色","#F2E5D5");clickText("应用")
+        clickText("按钮颜色  #416752");setColorInput("按钮颜色","#FFFF00")
+        val progress=Bundle().apply{putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE,64f)}
+        await("RGB滑杆应真实修改色值"){withAccessibilityNode({it.contentDescription?.toString()=="蓝 B"}){it.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.id,progress)}==true}
+        clickText("应用")
+        await("RGB修改应回填颜色"){hasText("按钮颜色  #FFFF40")}
+        capture("appearance-editor")
+        clickText("保存配色")
+        await("配色应持久化并回到书架"){store.settings().theme=="custom"&&hasText("更多")}
+        val saved=store.settings()
+        assertEquals("#102030",saved.customBackground);assertEquals("#F2E5D5",saved.customSurface);assertEquals("#FFFF40",saved.customAccent)
+        val monitor=instrumentation.addMonitor(MainActivity::class.java.name,null,false)
+        try {
+            onUi{main!!.recreate()}
+            val recreated=instrumentation.waitForMonitorWithTimeout(monitor,15000) as? MainActivity
+            assertNotNull("重新创建应用页面应成功",recreated)
+            main=recreated;setActivity(recreated)
+            await("重建后应显示书架"){hasText("更多")&&onUi{all(main!!.window.decorView).filterIsInstance<AbsListView>().any{it.adapter!=null}}}
+            assertEquals(saved,store.settings())
+            val more=onUi{all(main!!.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="更多"}}
+            assertEquals("亮色按钮应自动使用深色文字",Color.BLACK,onUi{more.currentTextColor})
+            assertEquals(Color.WHITE,Ui(main!!,saved).foreground)
+            assertEquals(Color.BLACK,Ui(main!!,saved).surfaceText)
+            capture("custom-colors-shelf")
+            val reader=instrumentation.startActivitySync(Intent(instrumentation.targetContext,ReaderActivity::class.java).putExtra("bookId",fixtureId).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            try {
+                await("阅读页应加载并继承配色"){onUi{all(reader.window.decorView).filterIsInstance<TextView>().any{it.isTextSelectable&&it.text.contains(fixtureText)}}}
+                val button=onUi{all(reader.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="设置"}}
+                assertEquals(Color.parseColor("#FFFF40"),onUi{button.backgroundTintList!!.defaultColor})
+                assertEquals(Color.BLACK,onUi{button.currentTextColor})
+                capture("custom-colors-reader")
+            } finally {onUi{reader.finish()};instrumentation.waitForIdleSync();ReaderPositions.awaitPendingWrites()}
+        } finally {instrumentation.removeMonitor(monitor)}
+    }
+
+    private fun setColorInput(label:String,value:String){
+        val args=Bundle().apply{putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,value)}
+        await("$label 的弹窗输入框应可编辑"){withAccessibilityNode({it.isEditable&&it.contentDescription?.toString()=="$label 色值"}){it.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,args)}==true}
+        instrumentation.waitForIdleSync()
+    }
+    private fun capture(name:String){
+        // Let dialog dismissal and feedback toasts finish before saving reviewable pixels.
+        instrumentation.waitForIdleSync();Thread.sleep(4000)
+        val bitmap=instrumentation.uiAutomation.takeScreenshot()
+        val folder=File(instrumentation.targetContext.getExternalFilesDir(null),"visual").apply{mkdirs()}
+        File(folder,"$name.png").outputStream().use{assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,it))};bitmap.recycle()
+    }
+
+    private fun start(expected: String = "更多") {
         main = activity
         await("主界面应完成初始化并显示 $expected") { hasText(expected) }
+        if(expected=="更多")await("书架应加载完成"){onUi{all(main!!.window.decorView).filterIsInstance<AbsListView>().any{it.adapter!=null}}}
     }
 
     private fun book(id: String = fixtureId, title: String = fixtureTitle): JsonObject = JsonParser.parseString("""
@@ -185,6 +279,7 @@ class ImportFlowTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivi
     }
 
     private fun selectDocument(button: String, file: File, action: String = Intent.ACTION_OPEN_DOCUMENT) {
+        if(button=="导入 JSON")clickText("更多")
         // Both category and MIME type participate in ActivityMonitor's IntentFilter matching.
         val filter = IntentFilter(action).apply { addCategory(Intent.CATEGORY_OPENABLE); addDataType("*/*") }
         val result = Instrumentation.ActivityResult(Activity.RESULT_OK, Intent().setData(Uri.fromFile(file)))

@@ -1,0 +1,14 @@
+
+org.quietreader.ImportFlowTest:....
+org.quietreader.MainActivityFlowTest:..
+org.quietreader.VisualSmokeTest:.
+org.quietreader.data.LibraryStoreTest:...............
+org.quietreader.data.PerformanceTest:.
+org.quietreader.reader.ReaderActivityFlowTest:.
+org.quietreader.reader.ReaderPaginationTest:.......
+org.quietreader.reader.ReaderPerformanceTest:.
+org.quietreader.reader.ReaderScrollFlowTest:.
+Test results for InstrumentationTestRunner=.................................
+Time: 25.859
+
+OK (33 tests)

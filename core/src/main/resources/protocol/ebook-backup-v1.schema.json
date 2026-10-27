@@ -681,9 +681,13 @@
             "system",
             "light",
             "sepia",
-            "dark"
+            "dark",
+            "custom"
           ]
         },
+        "customBackground": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#F8F6F0" },
+        "customSurface": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#FFFDF7" },
+        "customAccent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#416752" },
         "keepAwake": {
           "type": "boolean"
         },
