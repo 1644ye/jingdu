@@ -1,20 +1,11 @@
 package org.quietreader.remote
 
-import android.content.Context
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
 
 data class GitHubConnection(val owner:String="",val repo:String="",val branch:String="",val root:String="",val catalog:String="catalog.json") {
     fun validate(){require(owner.matches(Regex("[A-Za-z0-9_-]+"))&&repo.matches(Regex("[A-Za-z0-9_.-]+"))){"仓库所有者或名称无效"};if(root.isNotBlank())org.quietreader.core.RemoteLibrary.path(root);org.quietreader.core.RemoteLibrary.path(catalog)}
@@ -22,43 +13,9 @@ data class GitHubConnection(val owner:String="",val repo:String="",val branch:St
     fun path(value:String)=listOf(root.trim('/'),value).filter{it.isNotEmpty()}.joinToString("/")
 }
 
-/** Tokens are encrypted with an Android Keystore key and excluded from library backups. */
-class RemotePreferences(private val context:Context) {
-    private val preferences=context.getSharedPreferences("github-connections",Context.MODE_PRIVATE)
-    private val gson=Gson()
-    fun connection(sync:Boolean):GitHubConnection=gson.fromJson(preferences.getString(if(sync)"state"else"library",null),GitHubConnection::class.java)?:GitHubConnection(owner=preferences.getString(if(sync)"state-user"else"library-user","").orEmpty())
-    fun loggedIn(sync:Boolean)=token(sync).isNotEmpty()
-    fun requireLogin(sync:Boolean):String=token(sync).also{require(it.isNotEmpty()){"请先登录自己的 GitHub 账号"}}
-    fun save(sync:Boolean,value:GitHubConnection){value.validate();require(!value.owner.equals(connection(!sync).owner,true)||!value.repo.equals(connection(!sync).repo,true)){"书源和同步必须使用不同仓库"};if(!sync&&connection(false)!=value)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();preferences.edit().putString(if(sync)"state"else"library",gson.toJson(value)).putBoolean(if(sync)"state-valid"else"library-valid",true).commit();if(sync)pauseSync()}
-    fun validated(sync:Boolean)=preferences.getBoolean(if(sync)"state-valid"else"library-valid",false)
-    private fun pauseSync(){context.getSharedPreferences("progress-device",Context.MODE_PRIVATE).edit().putBoolean("enabled",false).putBoolean("paused",true).commit()}
-    private fun key():SecretKey {
-        val store=KeyStore.getInstance("AndroidKeyStore").apply{load(null)}
-        return (store.getKey("jingdu-github",null) as? SecretKey)?:KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES,"AndroidKeyStore").apply{init(KeyGenParameterSpec.Builder("jingdu-github",KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT).setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build())}.generateKey()
-    }
-    fun token(sync:Boolean):String {
-        val stored=preferences.getString(if(sync)"state-token"else"library-token",null)?:return ""
-        val parts=stored.split(':');val cipher=Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(parts[0],Base64.NO_WRAP)))
-        return String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)),Charsets.UTF_8)
-    }
-    fun login(sync:Boolean,token:String,login:String){
-        require(token.isNotBlank()&&login.isNotBlank()){"登录结果缺少账号或令牌"}
-        val changed=user(sync)!=login
-        if(!sync&&changed)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll()
-        val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key())
-        val value=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)+":"+Base64.encodeToString(cipher.doFinal(token.toByteArray()),Base64.NO_WRAP)
-        preferences.edit().apply{if(changed){remove(if(sync)"state"else"library");remove(if(sync)"state-valid"else"library-valid")};putString(if(sync)"state-token"else"library-token",value);putString(if(sync)"state-user"else"library-user",login)}.commit()
-        if(!sync&&changed)java.io.File(context.noBackupFilesDir,"github-catalog.json").delete()
-        if(sync)pauseSync()
-    }
-    fun user(sync:Boolean)=preferences.getString(if(sync)"state-user"else"library-user","未登录").orEmpty()
-    fun logout(sync:Boolean){if(!sync)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();preferences.edit().remove(if(sync)"state-token"else"library-token").remove(if(sync)"state-user"else"library-user").remove(if(sync)"state"else"library").remove(if(sync)"state-valid"else"library-valid").commit();if(sync)pauseSync()else java.io.File(context.noBackupFilesDir,"github-catalog.json").delete()}
-}
-
-class GitHubApi(private val token:String="",private val readJson:((String)->com.google.gson.JsonElement)?=null,private val openDownload:((URL)->HttpURLConnection)?=null) {
+class GitHubApi(private val token:String="",private val readJson:((String)->com.google.gson.JsonElement)?=null,private val openDownload:((URL)->HttpURLConnection)?=null,private val accessToken:(()->String)?=null,private val refreshUnauthorized:((String)->String)?=null,private val openRequest:((URL)->HttpURLConnection)?=null) {
     class EmptyRepository:IllegalStateException("仓库尚无提交。请先在 GitHub 上传书籍 JSON 和 catalog.json，再刷新书库；App 不会向书源写入文件。")
-    class Failure(val status:Int,val apiMessage:String?=null,method:String="GET"):Exception(when(status){401->"GitHub 授权已失效，请重新登录";403,429->"GitHub 权限不足或请求受限，请检查授权并稍后重试";404->"仓库或文件不存在，或当前账号没有访问权限";409->if(method=="PUT")"远端版本发生变化，请重新同步"else"GitHub 无法读取当前仓库状态（409）${apiMessage?.let{": $it"}.orEmpty()}";422->"GitHub 请求参数未通过校验或请求受限（422），请检查分支、路径及仓库配置";else->"GitHub 请求失败（$status）"})
+    class Failure(val status:Int,val apiMessage:String?=null,method:String="GET",val oauthError:String?=null):Exception(when(status){401->"GitHub 授权已失效，请重新登录";403,429->"GitHub 权限不足或请求受限，请检查授权并稍后重试";404->"仓库或文件不存在，或当前账号没有访问权限";409->if(method=="PUT")"远端版本发生变化，请重新同步"else"GitHub 无法读取当前仓库状态（409）${apiMessage?.let{": $it"}.orEmpty()}";422->"GitHub 请求参数未通过校验或请求受限（422），请检查分支、路径及仓库配置";else->"GitHub 请求失败（$status）"})
     companion object {
         const val LIBRARY_CLIENT="Iv23liwlcvuZlOilMie3"
         const val STATE_CLIENT="Iv23liNWpFfrzUs2jRqb"
@@ -76,17 +33,25 @@ class GitHubApi(private val token:String="",private val readJson:((String)->com.
             return JsonParser.parseString(GitHubApi().request("https://github.com/login/$path","POST",text,"application/x-www-form-urlencoded")).asJsonObject
         }
     }
-    fun request(url:String,method:String="GET",body:String?=null,contentType:String="application/json",limit:Int=40*1024*1024,raw:Boolean=false):String {
+    private fun <T> authorized(action:(String)->T):T {
+        val used=accessToken?.invoke()?:token
+        return try{action(used)}catch(error:Failure){
+            if(error.status!=401||refreshUnauthorized==null)throw error
+            action(refreshUnauthorized.invoke(used))
+        }
+    }
+    fun request(url:String,method:String="GET",body:String?=null,contentType:String="application/json",limit:Int=40*1024*1024,raw:Boolean=false):String=authorized{requestToken->requestOnce(url,method,body,contentType,limit,raw,requestToken)}
+    private fun requestOnce(url:String,method:String,body:String?,contentType:String,limit:Int,raw:Boolean,requestToken:String):String {
         require(url.startsWith("https://api.github.com/")||url.startsWith("https://github.com/login/"))
-        val connection=URL(url).openConnection() as HttpURLConnection
+        val connection=openRequest?.invoke(URL(url))?:URL(url).openConnection() as HttpURLConnection
         try {
             connection.instanceFollowRedirects=false;connection.connectTimeout=20000;connection.readTimeout=30000;connection.requestMethod=method
             connection.setRequestProperty("Accept",if(raw)"application/vnd.github.raw+json"else"application/json");connection.setRequestProperty("User-Agent","Jingdu-Android")
-            if(token.isNotEmpty()&&url.startsWith("https://api.github.com/"))connection.setRequestProperty("Authorization","Bearer $token")
+            if(requestToken.isNotEmpty()&&url.startsWith("https://api.github.com/"))connection.setRequestProperty("Authorization","Bearer $requestToken")
             if(body!=null){connection.doOutput=true;connection.setRequestProperty("Content-Type",contentType);connection.outputStream.use{it.write(body.toByteArray(Charsets.UTF_8))}}
             if(connection.responseCode !in 200..299){
-                val apiMessage=runCatching{connection.errorStream?.use{input->val output=java.io.ByteArrayOutputStream();val buffer=ByteArray(1024);while(output.size()<8192){val n=input.read(buffer,0,minOf(buffer.size,8192-output.size()));if(n<0)break;output.write(buffer,0,n)};JsonParser.parseString(output.toString("UTF-8")).asJsonObject.get("message")?.asString?.take(300)}}.getOrNull()
-                throw Failure(connection.responseCode,apiMessage,method)
+                val errorBody=runCatching{connection.errorStream?.use{input->val output=java.io.ByteArrayOutputStream();val buffer=ByteArray(1024);while(output.size()<8192){val n=input.read(buffer,0,minOf(buffer.size,8192-output.size()));if(n<0)break;output.write(buffer,0,n)};JsonParser.parseString(output.toString("UTF-8")).asJsonObject}}.getOrNull()
+                throw Failure(connection.responseCode,errorBody?.get("message")?.asString?.take(300),method,errorBody?.get("error")?.asString)
             }
             connection.inputStream.use{input->val out=java.io.ByteArrayOutputStream();val buffer=ByteArray(8192);var total=0;while(true){if(Thread.currentThread().isInterrupted)throw InterruptedException();val n=input.read(buffer);if(n<0)break;total+=n;require(total<=limit){"远端文件超过大小限制"};out.write(buffer,0,n)};return out.toString("UTF-8")}
         } finally {connection.disconnect()}
@@ -114,14 +79,15 @@ class GitHubApi(private val token:String="",private val readJson:((String)->com.
     }
     fun revision(connection:GitHubConnection):String=revisionOrNull(connection)?:throw EmptyRepository()
     fun file(connection:GitHubConnection,path:String,ref:String,raw:Boolean=false)=request("https://api.github.com"+connection.prefix()+"/contents/"+location(path)+"?ref="+segment(ref),raw=raw)
-    fun downloadFile(connection:GitHubConnection,path:String,ref:String,target:java.io.File,stopped:()->Boolean,progress:(Long)->Unit){
+    fun downloadFile(connection:GitHubConnection,path:String,ref:String,target:java.io.File,stopped:()->Boolean,progress:(Long)->Unit)=authorized{requestToken->downloadOnce(connection,path,ref,target,stopped,progress,requestToken)}
+    private fun downloadOnce(connection:GitHubConnection,path:String,ref:String,target:java.io.File,stopped:()->Boolean,progress:(Long)->Unit,requestToken:String){
         val offset=target.takeIf{it.exists()}?.length()?:0L
         val url=URL("https://api.github.com"+connection.prefix()+"/contents/"+location(path)+"?ref="+segment(ref))
         val http=openDownload?.invoke(url)?:url.openConnection() as HttpURLConnection
         try{
             http.instanceFollowRedirects=false;http.connectTimeout=20000;http.readTimeout=30000
             http.setRequestProperty("Accept","application/vnd.github.raw+json");http.setRequestProperty("User-Agent","Jingdu-Android")
-            if(token.isNotEmpty())http.setRequestProperty("Authorization","Bearer $token")
+            if(requestToken.isNotEmpty())http.setRequestProperty("Authorization","Bearer $requestToken")
             if(offset>0)http.setRequestProperty("Range","bytes=$offset-")
             val status=http.responseCode
             if(status==416){target.outputStream().close();throw java.io.IOException("远端不接受当前断点，已准备重新下载")}

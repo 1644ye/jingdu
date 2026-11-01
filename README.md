@@ -18,7 +18,7 @@
 ## 1. 安装应用
 
 - [下载最新版本及查看更新说明](https://github.com/1644ye/jingdu/releases/latest)
-- [直接下载 1.3.1 APK](https://github.com/1644ye/jingdu/releases/download/v1.3.1/QuietReader-1.3.1.apk)
+- [直接下载 1.3.2 APK](https://github.com/1644ye/jingdu/releases/download/v1.3.2/QuietReader-1.3.2.apk)
 - [下载当前 main 分支源码 ZIP](https://github.com/1644ye/jingdu/archive/refs/heads/main.zip)
 
 把 APK 下载到 Android 设备后打开，按系统提示安装；系统要求时，允许浏览器或文件管理器“安装未知应用”。更新现有安装时直接覆盖安装，保留原应用数据。
@@ -186,6 +186,8 @@ URL 与手动所有者／仓库字段二选一填写即可；已填写 URL 时�
 
 ## 7. 更换账号、仓库与升级
 
+**1.3.2 支持自动续期。升级后分别用原账号重新登录书源和同步角色一次，获取旧版未保存的刷新凭据。看到“已启用自动续期”后，日常请求会自动续期；仓库选择保留，进度角色重新登录后需确认开启同步。** 详见[自动续期与验收步骤](docs/1.3.2自动续期.md)。
+
 - **覆盖升级**：保留已保存账号、仓库、正文和阅读记录；授权过期时重新登录。
 - **同账号重新授权**：保留原仓库选择。
 - **切换不同账号**：成功登录后清空该角色旧仓库选择及验证状态，需重新连接保存。书源旧缓存和未完成任务不再沿用，另一角色的登录及本地书籍保留。
@@ -233,7 +235,7 @@ GitHub 登录令牌由 Android Keystore 加密保存在设备上，书库备份�
 | 仓库／文件不存在或无访问权限 | 核对账号、URL、仓库、分支、根目录、索引路径及应用仓库授权 |
 | 仓库暂无提交 | 给书源上传 JSON 与索引；进度仓库可先添加 README，或首次同步时初始化 |
 | 列出书名但下载失败 | 索引路径对应的文件是否存在、是否一文件一本书、索引 ID 是否等于正文书籍 ID |
-| 令牌过期、401 | 重新登录对应角色；同账号授权保留仓库选择 |
+| 令牌过期、401 | 1.3.2 自动刷新并重试一次；旧版登录、刷新凭据过期或被撤销时，重新登录对应角色，保留仓库选择 |
 | 同步已暂停 | 核对连接与本机位置后开启；更换连接及恢复备份后会暂停 |
 | 两台设备没有关联进度 | 从同一书源下载同一本书、连接同一私有进度仓库；检查是否只是本地导入了同名书 |
 | 网络超时／限流 | 确认设备可访问 GitHub，等待限制解除后重试；本地阅读仍可使用 |
@@ -257,7 +259,7 @@ GitHub 登录令牌由 Android Keystore 加密保存在设备上，书库备份�
 | 安装范围 | 仅自己使用可选 Only on this account；给其他账号使用选 Any account | 同左 |
 | 实际安装到的仓库 | 自己的书源仓库 | 自己的私有进度仓库 |
 
-设备授权流程不依赖回调地址；保留令牌过期机制时，本版到期通过重新登录继续使用。创建后进入该应用“Install App”，安装到目标仓库，并复制各自的 **Client ID**。设置含义见 [GitHub 官方文档](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app)。
+设备授权流程不依赖回调地址；保留令牌过期机制时，1.3.2 使用刷新令牌自动续期；刷新凭据失效后重新登录。创建后进入该应用“Install App”，安装到目标仓库，并复制各自的 **Client ID**。设置含义见 [GitHub 官方文档](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app)。
 
 在 [GitHubConnection.kt](app/src/main/java/org/quietreader/remote/GitHubConnection.kt) 中更新 `GitHubApi` 的两个常量：
 
@@ -313,7 +315,7 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w org.quietreader.test/android.test.InstrumentationTestRunner
 ```
 
-1.3.1 已记录 71 项 Android 完整回归、17 项 Release 相关复测通过，42 项核心复用通过缓存，Release Lint 0 错误／28 警告。真实第三方账号授权、双设备联网同步及厂商后台行为需在相应设备验收，范围见[账号与隐私记录](docs/1.3.1账号与隐私.md)和[验收报告](ACCEPTANCE.md)。
+1.3.2 的非调试 Release 已通过全部 83 项 Android 回归，包含 12 项新增令牌续期测试；42 项核心复用通过缓存，Release Lint 0 错误／28 警告。真实第三方账号授权、双设备联网同步及厂商后台行为需在相应设备验收，范围见[自动续期记录](docs/1.3.2自动续期.md)、[账号与隐私记录](docs/1.3.1账号与隐私.md)和[验收报告](ACCEPTANCE.md)。
 
 ## 更多资料
 

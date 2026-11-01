@@ -32,7 +32,7 @@ class ProgressSync(private val context:Context,private val store:LibraryStore) {
     @Synchronized fun sync(attempt:Int=0):String {
         require(connections.validated(true)){"请先在进度账号与仓库设置中连接并保存"}
         require(!prefs.getBoolean("paused",false)){"恢复备份后同步已暂停，请确认后重新启用"}
-        val api=GitHubApi(connections.token(true).also{require(it.isNotEmpty()){"请先登录进度同步账号"}})
+        val api=connections.api(true)
         val connection=connections.connection(true);val state=read();val local=state.getAsJsonObject("books")?:JsonObject().also{state.add("books",it)}
         val checkpoints=state.getAsJsonObject("checkpoints")?:JsonObject().also{state.add("checkpoints",it)}
         val sources=store.remoteSources().toMap()
