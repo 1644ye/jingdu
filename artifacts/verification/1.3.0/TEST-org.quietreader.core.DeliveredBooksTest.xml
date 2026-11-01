@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.quietreader.core.DeliveredBooksTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-01T06:34:08.883Z" hostname="AMD-YES" time="0.231">
+  <properties/>
+  <testcase name="deliveredTangPoemsAreAcceptedByActualParser" classname="org.quietreader.core.DeliveredBooksTest" time="0.107"/>
+  <testcase name="deliveredEnglishNovelHasAll117Chapters" classname="org.quietreader.core.DeliveredBooksTest" time="0.124"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

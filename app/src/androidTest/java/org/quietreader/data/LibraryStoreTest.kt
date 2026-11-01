@@ -14,6 +14,54 @@ import org.quietreader.core.ReadingSettings
 /** Exercises Android SQLite itself, including rollback, foreign keys, migration and durable reopen. */
 @Suppress("DEPRECATION")
 class LibraryStoreTest : AndroidTestCase() {
+    fun testCustomShelvesHomeVisibilityAndOrderingSurviveBackupAndReopen(){
+        store.importFile(Protocol.wrap(listOf(novel("home-a"),novel("home-b"))))
+        val a=store.createGroup("诗与远方");val b=store.createGroup("长篇小说")
+        store.setMembership(listOf("home-a"),a,true);store.setMembership(listOf("home-a"),b,true)
+        assertTrue(store.hiddenOnHome().isEmpty())
+        store.setHomeVisible(listOf("home-a"),false);store.renameHomeShelf("我的精选");store.renameGroup(a,"诗集")
+        store.moveShelf(b,-1)
+        val snapshot=store.backup();store.restoreBackup(snapshot);store.close();store=LibraryStore(context,databaseName)
+        assertEquals("我的精选",store.homeShelfName());assertEquals(listOf(b,a),store.groups().map{it.id})
+        assertEquals("诗集",store.groups().last().name);assertEquals(setOf("home-a"),store.hiddenOnHome());assertEquals(setOf(a,b),store.groupIds("home-a"))
+        store.deleteGroup(a);assertNotNull(store.book("home-a"));assertEquals(setOf(b),store.groupIds("home-a"))
+        store.setHomeVisible(listOf("home-a"),true);assertTrue(store.hiddenOnHome().isEmpty())
+    }
+    fun testSelectedBackupDoesNotLeakOtherBooksHomeVisibility(){
+        store.importFile(Protocol.wrap(listOf(novel("a"),novel("b"))))
+        store.setHomeVisible(listOf("a","b"),false)
+        val snapshot=store.selectedBackup(listOf("a"));assertFalse(snapshot.getAsJsonObject("metadata").has("remote:home:b"))
+        store.restoreBackup(snapshot);assertEquals(setOf("a"),store.hiddenOnHome())
+    }
+    fun testHomeVisibilityBatchFailureRollsBackAndDeleteClearsPreference(){
+        store.importFile(Protocol.wrap(listOf(novel("a"))))
+        try{store.setHomeVisible(listOf("a","missing"),false);fail("Missing book must reject batch")}catch(_:IllegalArgumentException){}
+        assertTrue(store.hiddenOnHome().isEmpty());store.setHomeVisible(listOf("a"),false);store.deleteBooks(listOf("a"))
+        store.importFile(Protocol.wrap(listOf(novel("a"))));assertTrue(store.hiddenOnHome().isEmpty())
+    }
+    fun testSourceAndPersonalTagsRemainSeparateAcrossUpdateAndRestore(){
+        fun source(tags:List<String>)=JsonObject().apply{addProperty("identity","repo/library/book");addProperty("repositoryId","repo");addProperty("revision","v1");add("tags",com.google.gson.JsonArray().apply{tags.forEach{add(it)}})}
+        val book=novel("book").apply{add("tags",com.google.gson.JsonArray().apply{add("来源")})}
+        val id=store.importRemote(book,source(listOf("来源")))
+        store.editBook(id,"标题","作者","",listOf("来源","个人"))
+        val changed=novel("book").apply{add("tags",com.google.gson.JsonArray().apply{add("新来源")})}
+        store.importRemote(changed,source(listOf("新来源")))
+        assertEquals(listOf("来源","个人"),store.personalTags(id))
+        assertEquals(listOf("新来源"),store.sourceTags(id))
+        store.restoreBackup(store.backup())
+        assertEquals(listOf("来源","个人"),store.personalTags(id))
+        assertEquals(listOf("新来源"),store.sourceTags(id))
+    }
+    fun testMissingSourceMarkerNeverDeletesLocalBook(){
+        val id=store.importRemote(novel("a"),JsonObject().apply{addProperty("identity","repo/library/a");addProperty("repositoryId","repo");addProperty("revision","v1")})
+        store.reconcileSources("repo","library",emptySet(),"commit2")
+        assertTrue(store.remoteMetadata("source:$id")!!.get("removed").asBoolean)
+        assertNotNull(store.book(id))
+        store.reconcileSources("other","library",emptySet(),"commit3")
+        assertTrue(store.remoteMetadata("source:$id")!!.get("removed").asBoolean)
+        store.reconcileSources("repo","library",setOf("repo/library/a"),"commit4")
+        assertFalse(store.remoteMetadata("source:$id")!!.get("removed").asBoolean)
+    }
     private lateinit var store: LibraryStore
     private val databaseName = "library-store-instrumentation.db"
 
@@ -27,6 +75,36 @@ class LibraryStoreTest : AndroidTestCase() {
         store.close()
         context.deleteDatabase(databaseName)
         super.tearDown()
+    }
+
+    fun testSelectedBackupKeepsOnlySelectedBooksAndTags() {
+        store.importFile(Protocol.wrap(listOf(novel("a"),novel("b"))),emptyMap())
+        store.editBook("a","标签书","作者","",listOf("文学","待读"))
+        store.saveSettings(ReadingSettings(),"b")
+        val backup=store.selectedBackup(listOf("a"))
+        assertTrue(store.validateBackup(backup).toString(),store.validateBackup(backup).isEmpty())
+        assertEquals(1,backup.getAsJsonObject("content").getAsJsonArray("books").size())
+        store.restoreBackup(backup)
+        assertEquals(listOf("a"),store.listBooks().map{it.id})
+        assertEquals(listOf("文学","待读"),store.listBooks().single().tags)
+    }
+
+    fun testRemoteRepositoryIdentityDoesNotOverwriteOtherBooks(){
+        fun source(identity:String)=JsonObject().apply{addProperty("identity",identity);addProperty("revision","version1");add("tags",com.google.gson.JsonArray())}
+        val local=novel("same-id")
+        store.importFile(Protocol.wrap(listOf(local)),emptyMap())
+        val first=store.importRemote(local,source("repo-a/library/same-id"))
+        val second=store.importRemote(local,source("repo-b/library/same-id"))
+        assertFalse(first==second)
+        assertEquals(3,store.listBooks().size)
+        store.editBook(first,"个人书名","作者","",listOf("个人标签"))
+        assertEquals(first,store.importRemote(local,source("repo-a/library/same-id")))
+        assertTrue(store.listBooks().first{it.id==first}.tags.contains("个人标签"))
+        assertEquals(3,store.listBooks().size)
+        val backup=store.backup()
+        assertTrue(store.validateBackup(backup).toString(),store.validateBackup(backup).isEmpty())
+        store.restoreBackup(backup)
+        assertEquals(2,store.remoteSources().size)
     }
 
     fun testCancelRollsBackEntireCurrentFile() {

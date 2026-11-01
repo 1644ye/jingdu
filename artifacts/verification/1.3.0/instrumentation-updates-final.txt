@@ -1,0 +1,9 @@
+
+org.quietreader.ShelfLayoutTest:...
+org.quietreader.AppUpdaterTest:...
+Test results for InstrumentationTestRunner=......
+Time: 7.951
+
+OK (6 tests)
+
+

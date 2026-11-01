@@ -486,8 +486,9 @@ class ReaderActivity : Activity() {
         }
     }
 
-    override fun onPause(){foregroundActive=false;main.removeCallbacks(saveRunnable);persistPosition(true);super.onPause()}
+    override fun onPause(){foregroundActive=false;main.removeCallbacks(saveRunnable);persistPosition(true);(application as ReaderApp).readingActive=false;(application as ReaderApp).scheduleSync();super.onPause()}
     override fun onResume(){
+        (application as ReaderApp).readingActive=true
         super.onResume()
         foregroundActive=true
         if(!initialized)return

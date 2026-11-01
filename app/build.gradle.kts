@@ -9,12 +9,19 @@ android {
         applicationId = "org.quietreader"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 9
+        versionName = "1.3.0"
         testInstrumentationRunner = "android.test.InstrumentationTestRunner"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-    buildTypes { release { isMinifyEnabled = false } }
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            // Preserve upgrade compatibility with the APKs already delivered to the user.
+            // This is a non-debuggable build with the existing development signing identity.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
     lint {
         // AGP 9.1 OverdrawDetector crashes in Kotlin FIR ("Unexpected owner function: null").
         // Keep all other lint checks enabled; see ACCEPTANCE.md for this tool limitation.

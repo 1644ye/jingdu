@@ -76,6 +76,20 @@ class MainActivityFlowTest:ActivityInstrumentationTestCase2<MainActivity>(MainAc
         await("保存后返回实际书架"){onUi{all(main.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="更多"}}}
     }
 
+    fun testNotesParentRestoresAfterRecreate(){
+        val original=activity
+        await("书架初始化"){onUi{all(original.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="更多"}}}
+        instrumentation.runOnMainSync{original.javaClass.getDeclaredMethod("navigate",String::class.java,String::class.java).apply{isAccessible=true}.invoke(original,"detail",fixtureId)}
+        await("详情载入"){onUi{all(original.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="书签与笔记"}}}
+        instrumentation.runOnMainSync{all(original.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="书签与笔记"}.performClick()}
+        val monitor=instrumentation.addMonitor(MainActivity::class.java.name,null,false);var restored:MainActivity?=null
+        try{
+            instrumentation.runOnMainSync{original.recreate()};restored=instrumentation.waitForMonitorWithTimeout(monitor,10000) as? MainActivity;assertNotNull(restored)
+            await("笔记页面恢复"){onUi{all(restored!!.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="<"}}}
+            instrumentation.runOnMainSync{all(restored!!.window.decorView).filterIsInstance<Button>().first{it.text.toString()=="<"}.performClick()}
+            await("返回本书详情而非直接退回书架"){onUi{all(restored!!.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="编辑信息"}}}
+        }finally{restored?.let{screen->instrumentation.runOnMainSync{screen.finish()}};instrumentation.removeMonitor(monitor)}
+    }
     private fun all(view:View):List<View> = buildList{add(view);if(view is ViewGroup)for(i in 0 until view.childCount)addAll(all(view.getChildAt(i)))}
     private fun <T> onUi(block:()->T):T {val result=AtomicReference<T>();instrumentation.runOnMainSync{result.set(block())};return result.get()}
     private fun await(message:String,condition:()->Boolean){val end=System.currentTimeMillis()+20000;while(System.currentTimeMillis()<end){instrumentation.waitForIdleSync();if(condition())return;Thread.sleep(100)};fail(message)}

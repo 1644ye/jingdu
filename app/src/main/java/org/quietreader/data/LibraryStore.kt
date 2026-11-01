@@ -25,6 +25,29 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
     private val appContext = context.applicationContext
     private val gson = Gson()
 
+    @Synchronized fun remoteMetadata(key:String):JsonObject? = readableDatabase.rawQuery("SELECT value FROM metadata WHERE key=?",arrayOf("remote:$key")).use{c->if(c.moveToFirst())json(c.getString(0))else null}
+    @Synchronized fun saveRemoteMetadata(key:String,value:JsonObject){writableDatabase.insertWithOnConflict("metadata",null,ContentValues().apply{put("key","remote:$key");put("value",value.toString())},SQLiteDatabase.CONFLICT_REPLACE)}
+    @Synchronized fun remoteSources():List<Pair<String,JsonObject>> = readableDatabase.rawQuery("SELECT key,value FROM metadata WHERE key LIKE 'remote:source:%'",null).use{c->buildList{while(c.moveToNext()){val id=c.getString(0).removePrefix("remote:source:");if(existsBook(id))add(id to json(c.getString(1)))}}}
+
+    @Synchronized fun importRemote(book:JsonObject,source:JsonObject):String = transaction {
+        val identity=source.get("identity").asString
+        val id="github-"+UUID.nameUUIDFromBytes(identity.toByteArray(Charsets.UTF_8)).toString()
+        val old=listBooks().firstOrNull{it.id==id}
+        val personal=if(old!=null)personalTags(id)else emptyList()
+        val updated=book.deepCopy().apply{addProperty("id",id)}
+        // Personal tag additions survive a source update; source labels are tracked separately.
+        val incoming=updated.getAsJsonArray("tags")?.map{it.asString}.orEmpty();updated.add("tags",JsonArray().apply{(incoming+personal).distinct().forEach{add(it)}})
+        importFile(Protocol.wrap(listOf(updated)),mapOf(id to "update"))
+        saveRemoteMetadata("personal:$id",JsonObject().apply{add("tags",gson.toJsonTree(personal))})
+        saveRemoteMetadata("source:$id",source.deepCopy().apply{addProperty("removed",false)})
+        id
+    }
+    @Synchronized fun sourceTags(id:String):List<String> = remoteMetadata("source:$id")?.getAsJsonArray("tags")?.map{it.asString}.orEmpty()
+    @Synchronized fun personalTags(id:String):List<String> = remoteMetadata("personal:$id")?.getAsJsonArray("tags")?.map{it.asString}?:listBooks().firstOrNull{it.id==id}?.tags.orEmpty().filter{it !in sourceTags(id)}
+    @Synchronized fun reconcileSources(repository:String,library:String,identities:Set<String>,commit:String)=transaction{
+        remoteSources().filter{it.second.get("repositoryId")?.asString==repository&&it.second.get("identity").asString.startsWith("$repository/$library/")}.forEach{(id,source)->source.addProperty("removed",source.get("identity").asString !in identities);source.addProperty("checkedCommit",commit);saveRemoteMetadata("source:$id",source)}
+    }
+
     init { setWriteAheadLoggingEnabled(true) }
 
     override fun onConfigure(db: SQLiteDatabase) {
@@ -207,16 +230,18 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
     @Synchronized fun exportContent(ids: List<String>): JsonObject = Protocol.wrap(ids.distinct().map { book(it) ?: throw IllegalArgumentException("书籍不存在：$it") })
 
     @Synchronized fun deleteBooks(ids: List<String>) = transaction { db ->
-        ids.distinct().forEach { id -> db.delete("settings","scope=?",arrayOf(id)); db.delete("books","id=?",arrayOf(id)) }
+        ids.distinct().forEach { id -> db.delete("settings","scope=?",arrayOf(id)); db.delete("metadata","key=?",arrayOf("remote:home:$id")); db.delete("books","id=?",arrayOf(id)) }
         Unit
     }
 
-    @Synchronized fun editBook(id: String,title: String,author: String,description: String,tags: List<String>) {
+    @Synchronized fun editBook(id: String,title: String,author: String,description: String,tags: List<String>) = transaction {
         require(title.isNotBlank()) { "书名不能为空。" }
         val metadata = readableDatabase.rawQuery("SELECT metadata FROM books WHERE id=?",arrayOf(id)).use { c -> require(c.moveToFirst()) { "书籍不存在。" }; json(c.getString(0)) }
         metadata.addProperty("title",title); metadata.addProperty("author",author); metadata.addProperty("description",description)
-        metadata.add("tags",JsonArray().apply { tags.forEach { add(it) } })
+        if(remoteMetadata("source:$id")!=null)saveRemoteMetadata("personal:$id",JsonObject().apply{add("tags",gson.toJsonTree(tags.distinct()))})
+        metadata.add("tags",JsonArray().apply { (sourceTags(id)+tags).distinct().forEach { add(it) } })
         writableDatabase.update("books",metadataValues(metadata),"id=?",arrayOf(id))
+        Unit
     }
 
     @Synchronized fun toggleFavorite(id: String) { writableDatabase.execSQL("UPDATE books SET favorite=1-favorite WHERE id=?",arrayOf(id)) }
@@ -225,7 +250,16 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
         writableDatabase.update("books",ContentValues().apply { put("status",status) },"id=?",arrayOf(id))
     }
 
-    @Synchronized fun groups(): List<ShelfGroup> = readableDatabase.rawQuery("SELECT id,name FROM shelf_groups ORDER BY id",null).use { c -> buildList { while(c.moveToNext()) add(ShelfGroup(c.getLong(0),c.getString(1))) } }
+    @Synchronized fun homeShelfName():String=remoteMetadata("shelf-home")?.get("name")?.asString?:"首页"
+    @Synchronized fun renameHomeShelf(name:String){require(name.isNotBlank());saveRemoteMetadata("shelf-home",JsonObject().apply{addProperty("name",name.trim())})}
+    @Synchronized fun hiddenOnHome():Set<String> = readableDatabase.rawQuery("SELECT key,value FROM metadata WHERE key LIKE 'remote:home:%'",null).use{cursor->buildSet{while(cursor.moveToNext())if(json(cursor.getString(1)).get("hidden")?.asBoolean==true)add(cursor.getString(0).removePrefix("remote:home:"))}}
+    @Synchronized fun setHomeVisible(ids:List<String>,visible:Boolean)=transaction{ids.forEach{id->require(existsBook(id)){"书籍不存在"};saveRemoteMetadata("home:$id",JsonObject().apply{addProperty("hidden",!visible)})}}
+    @Synchronized fun groups(): List<ShelfGroup> {
+        val rows=readableDatabase.rawQuery("SELECT id,name FROM shelf_groups ORDER BY id",null).use { c -> buildList { while(c.moveToNext()) add(ShelfGroup(c.getLong(0),c.getString(1))) } }
+        val order=remoteMetadata("shelf-order")?.getAsJsonArray("ids")?.map{it.asLong}.orEmpty()
+        return rows.sortedWith(compareBy<ShelfGroup>{order.indexOf(it.id).let{index->if(index<0)Int.MAX_VALUE else index}}.thenBy{it.id})
+    }
+    @Synchronized fun moveShelf(id:Long,delta:Int){val ids=groups().map{it.id}.toMutableList();val index=ids.indexOf(id);require(index>=0);val target=(index+delta).coerceIn(0,ids.lastIndex);java.util.Collections.swap(ids,index,target);saveRemoteMetadata("shelf-order",JsonObject().apply{add("ids",gson.toJsonTree(ids))})}
     @Synchronized fun createGroup(name: String): Long { require(name.isNotBlank()) { "分组名称不能为空。" }; return writableDatabase.insertOrThrow("shelf_groups",null,ContentValues().apply { put("name",name.trim()) }) }
     @Synchronized fun renameGroup(id: Long,name: String) { require(name.isNotBlank()) { "分组名称不能为空。" }; writableDatabase.update("shelf_groups",ContentValues().apply { put("name",name.trim()) },"id=?",arrayOf(id.toString())) }
     @Synchronized fun deleteGroup(id: Long) { writableDatabase.delete("shelf_groups","id=?",arrayOf(id.toString())) }
@@ -238,12 +272,24 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
     }
 
     @Synchronized fun position(bookId: String): Anchor? = readableDatabase.rawQuery("SELECT anchor FROM positions WHERE book_id=?",arrayOf(bookId)).use { c -> if(c.moveToFirst()) gson.fromJson(c.getString(0),Anchor::class.java) else null }
+    @Synchronized fun applyRemoteProgress(anchor:Anchor,progress:Float,status:String)=transaction{require(status in STATUSES);savePosition(anchor,progress);setStatus(anchor.bookId,status)}
+    @Synchronized fun locateRemote(anchor:Anchor):Anchor? {
+        val current=text(anchor.bookId,anchor.sectionId,anchor.contentId)?:return null
+        if(anchor.orphaned)return null
+        val quote=anchor.quote
+        if(quote.isEmpty())return null
+        var found=-1;var cursor=0
+        while(cursor<=current.length-quote.length){val at=current.indexOf(quote,cursor);if(at<0)break;val end=at+quote.length
+            if((anchor.prefix.isEmpty()||current.substring(0,at).endsWith(anchor.prefix))&&(anchor.suffix.isEmpty()||current.substring(end).startsWith(anchor.suffix))){if(found>=0)return null;found=at};cursor=at+1
+        }
+        return if(found<0)null else anchor.copy(start=found,end=found+quote.length,orphaned=false)
+    }
     @Synchronized fun savePosition(anchor: Anchor,progress: Float) = transaction { db ->
         require(progress.isFinite() && progress in 0f..1f) { "阅读进度无效。" }
         val normalized = checkedAnchor(anchor,pointQuote = true)
         db.insertWithOnConflict("positions",null,ContentValues().apply { put("book_id",anchor.bookId); put("anchor",gson.toJson(normalized)); put("progress",progress) },SQLiteDatabase.CONFLICT_REPLACE)
         db.execSQL("UPDATE books SET progress=?,last_read=?,status=CASE WHEN ? >= 0.999 THEN 'read' WHEN status='read' THEN 'read' ELSE 'reading' END WHERE id=?",
-            arrayOf<Any>(progress,System.currentTimeMillis(),progress,anchor.bookId)); Unit
+            arrayOf<Any>(progress,System.currentTimeMillis(),progress,anchor.bookId)); (appContext as? org.quietreader.ReaderApp)?.scheduleSync(); Unit
     }
 
     @Synchronized fun annotations(bookId: String? = null,query: String = ""): List<AnnotationRecord> {
@@ -353,6 +399,24 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
             })
             add("metadata",JsonObject().apply { db.rawQuery("SELECT key,value FROM metadata",null).use { c -> while(c.moveToNext()) addProperty(c.getString(0),c.getString(1)) } })
         }
+    }
+
+    @Synchronized fun selectedBackup(ids:List<String>):JsonObject {
+        val selected=ids.toSet();require(selected.isNotEmpty()){"请先选择书籍"}
+        val snapshot=backup()
+        fun retain(owner:JsonObject,key:String,predicate:(JsonObject)->Boolean){
+            owner.add(key,JsonArray().apply{owner.getAsJsonArray(key).forEach{if(predicate(it.asJsonObject))add(it)}})
+        }
+        retain(snapshot.getAsJsonObject("content"),"books"){it.get("id").asString in selected}
+        listOf("library","memberships","poemFavorites").forEach{key->retain(snapshot,key){it.get("bookId").asString in selected}}
+        listOf("positions","annotations").forEach{key->retain(snapshot,key){it.getAsJsonObject("anchor").get("bookId").asString in selected}}
+        retain(snapshot,"settings"){it.get("scope").asString.let{scope->scope.isEmpty()||scope in selected}}
+        val metadata=snapshot.getAsJsonObject("metadata")
+        metadata.keySet().toList().filter{key->(key.startsWith("remote:source:")||key.startsWith("remote:personal:")||key.startsWith("remote:home:"))&&key.substringAfter("remote:").substringAfter(':') !in selected}.forEach{metadata.remove(it)}
+        val groups=snapshot.getAsJsonArray("memberships").map{it.asJsonObject.get("groupId").asLong}.toSet()
+        retain(snapshot,"groups"){it.get("id").asLong in groups}
+        require(validateBackup(snapshot).isEmpty()){"所选书籍备份校验失败"}
+        return snapshot
     }
 
     private fun rows(db: SQLiteDatabase,sql: String,mapper: (Cursor) -> JsonObject): JsonArray = JsonArray().apply {
@@ -514,6 +578,7 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
 
     /** Returns the pre-restore backup, durably written before touching existing rows. */
     @Synchronized fun restoreBackup(document: JsonObject): File {
+        appContext.getSharedPreferences("progress-device",Context.MODE_PRIVATE).edit().putBoolean("paused",true).commit()
         val errors = validateBackup(document)
         require(errors.isEmpty()) { errors.joinToString("\n") }
         val currentSnapshot=backup()
