@@ -42,7 +42,7 @@ class DownloadQueue(private val context:Context,private val store:LibraryStore,p
             try{
                 val preferences=RemotePreferences(context);val connection=gson.fromJson(task.get("connection"),GitHubConnection::class.java)
                 require(preferences.connection(false)==connection&&preferences.user(false)==task.get("account").asString){"书源账号或仓库已更换，请重新选择下载"}
-                val api=apiFactory(preferences.token(false));val entry=gson.fromJson(task.get("entry"),RemoteLibrary.Entry::class.java);val commit=task.get("commit").asString
+                val api=apiFactory(preferences.requireLogin(false));val entry=gson.fromJson(task.get("entry"),RemoteLibrary.Entry::class.java);val commit=task.get("commit").asString
                 val blob=api.fileVersion(connection,connection.path(entry.path),commit)
                 val existing=store.remoteSources().firstOrNull{it.second.get("identity").asString==task.get("identity").asString}
                 if(existing?.second?.get("revision")?.asString!=blob){

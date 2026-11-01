@@ -66,9 +66,14 @@ class RemoteActivity:Activity() {
             handler.post{busy=false;if(!isDestroyed&&!isFinishing){if(origin==pageGeneration){operationStatus.text=explanation;operationStatus.visibility=View.VISIBLE;ui.dialog().setTitle("操作未完成").setMessage(explanation).setPositiveButton("知道了",null).show()}else operationStatus.visibility=View.GONE}}
         }}
     }
-    private fun home(){screenKind="home";page("GitHub 书库与同步",up={finish()});panel.addView(ui.button("浏览书源目录"){loadCatalog()});panel.addView(ui.button("直接浏览真实目录（无需索引）"){run({connection=preferences.connection(false);revision=GitHubApi(preferences.token(false)).revision(connection)}){directory("")}});if(cacheFile().exists())panel.addView(ui.button("离线浏览上次索引"){run({val cached=JsonParser.parseString(cacheFile().readText()).asJsonObject;connection=preferences.connection(false);repositoryId=cached.get("repository").asString;revision=cached.get("revision").asString;RemoteLibrary.catalog(JsonParser.parseString(cached.get("catalog").asString).asJsonObject)}){catalog=it;offline=true;folder="";browse()}});panel.addView(ui.button("书源账号与仓库设置"){settings(false)});panel.addView(ui.button("进度账号与仓库设置"){settings(true)});panel.addView(ui.button("阅读进度同步"){syncPage()});panel.addView(ui.button("下载任务"){tasksPage()});panel.addView(ui.text("书源仅供读取。下载与本地标签操作不会修改 GitHub 书源。"))}
+    private fun home(){screenKind="home";page("GitHub 书库与同步",up={finish()});panel.addView(ui.button("浏览书源目录"){loadCatalog()});panel.addView(ui.button("直接浏览真实目录（无需索引）"){if(ensureSource())run({connection=preferences.connection(false);revision=GitHubApi(preferences.requireLogin(false)).revision(connection)}){directory("")}});if(cacheFile().exists())panel.addView(ui.button("离线浏览上次索引"){run({val cached=JsonParser.parseString(cacheFile().readText()).asJsonObject;connection=preferences.connection(false);repositoryId=cached.get("repository").asString;revision=cached.get("revision").asString;RemoteLibrary.catalog(JsonParser.parseString(cached.get("catalog").asString).asJsonObject)}){catalog=it;offline=true;folder="";browse()}});panel.addView(ui.button("书源账号与仓库设置"){settings(false)});panel.addView(ui.button("进度账号与仓库设置"){settings(true)});panel.addView(ui.button("阅读进度同步"){syncPage()});panel.addView(ui.button("下载任务"){tasksPage()});panel.addView(ui.text("首次使用请登录自己的 GitHub 账号并选择仓库。书源仅供读取，App 不会修改 GitHub 书源。"))}
+    private fun ensureSource():Boolean {
+        val reason=if(!preferences.loggedIn(false))"请先登录自己的 GitHub 账号"else if(!preferences.validated(false))"请选择当前账号可访问的书源仓库，连接并保存"else return true
+        settings(false);operationStatus.text=reason;operationStatus.visibility=View.VISIBLE;return false
+    }
+    private fun clearSourceSession(){catalog=null;selected.clear();folder="";search="";directoryPath="";fileVersions.clear();repositoryId="";revision="";connection=preferences.connection(false);offline=false}
     private fun settings(sync:Boolean){screenKind=if(sync)"state-settings"else"source-settings";page(if(sync)"进度同步连接"else"只读书源连接");val current=preferences.connection(sync)
-        panel.addView(ui.text("当前账号：${preferences.user(sync)}"));panel.addView(ui.actions("登录 / 更换账号" to {login(sync)},"退出账号" to {preferences.logout(sync);cacheFile().delete();settings(sync)}))
+        panel.addView(ui.text("当前账号：${preferences.user(sync)}"));panel.addView(ui.text("请使用自己的 GitHub 账号授权；更换账号后需重新选择仓库。",14f));panel.addView(ui.actions("登录 / 更换账号" to {login(sync)},"退出账号" to {preferences.logout(sync);if(!sync)clearSourceSession();settings(sync)}))
         val url=ui.field("粘贴 GitHub 仓库 URL（可选）");panel.addView(url)
         val owner=ui.field("仓库所有者",current.owner);val repo=ui.field("仓库名称",current.repo);val branch=ui.field("分支（空白使用默认分支）",current.branch);val root=ui.field("书源根目录（可留空）",current.root);val index=ui.field("索引路径",current.catalog)
         listOf(owner,repo,branch).forEach{panel.addView(it)};if(!sync)listOf(root,index).forEach{panel.addView(it)}
@@ -76,7 +81,7 @@ class RemoteActivity:Activity() {
         panel.addView(ui.button("连接并保存"){
             run({var value=GitHubConnection(owner.text.toString().trim(),repo.text.toString().trim(),branch.text.toString().trim(),if(sync)""else root.text.toString().trim(),if(sync)"catalog.json"else index.text.toString().trim())
                 if(url.text.isNotBlank()){val parsed=Uri.parse(url.text.toString().trim());require(parsed.scheme=="https"&&parsed.host=="github.com"&&parsed.pathSegments.size==2){"请填写 https://github.com/所有者/仓库"};value=value.copy(owner=parsed.pathSegments[0],repo=parsed.pathSegments[1].removeSuffix(".git"))}
-                value.validate();val token=preferences.token(sync);val api=GitHubApi(token)
+                val token=preferences.requireLogin(sync);value.validate();val api=GitHubApi(token)
                 val repository=api.get(value.prefix()).asJsonObject
                 val empty=api.revisionOrNull(value)==null
                 if(token.isNotEmpty()){val accessible=api.repositories(sync);if(sync||repository.get("private").asBoolean)require(accessible.any{it.get("id")==repository.get("id")}){"请将对应 GitHub App 安装到此仓库，并检查权限"}}
@@ -102,12 +107,12 @@ class RemoteActivity:Activity() {
                     }
                     require(token!=null){"授权过期或已取消"};val user=GitHubApi(token).get("/user").asJsonObject.get("login").asString
                     require(!cancelled.get()){"已取消授权等待"};preferences.login(sync,token,user);cacheFile().delete();user
-                },message="正在等待 GitHub 授权确认…\n请在浏览器完成设备码授权，再返回此处等待。"){settings(sync)}
+                },message="正在等待 GitHub 授权确认…\n请在浏览器完成设备码授权，再返回此处等待。"){if(!sync)clearSourceSession();settings(sync)}
             });panel.addView(ui.button("取消授权等待"){cancelled.set(true);if(!busy)settings(sync)})
         }
     }
     private fun cacheFile()=java.io.File(noBackupFilesDir,"github-catalog.json")
-    private fun loadCatalog(){run({connection=preferences.connection(false);offline=false;fileVersions.clear();val api=GitHubApi(preferences.token(false));val repo=api.get(connection.prefix()).asJsonObject;repositoryId=repo.get("id").asString;revision=api.revision(connection)
+    private fun loadCatalog(){if(!ensureSource())return;run({connection=preferences.connection(false);offline=false;fileVersions.clear();val api=GitHubApi(preferences.requireLogin(false));val repo=api.get(connection.prefix()).asJsonObject;repositoryId=repo.get("id").asString;revision=api.revision(connection)
             val text=api.file(connection,connection.path(connection.catalog),revision,true);val parsed=RemoteLibrary.catalog(JsonParser.parseString(text).asJsonObject)
             val entries=parsed.books.associateBy{"$repositoryId/${parsed.libraryId}/${it.id}"};val present=entries.keys.toMutableSet()
             store.remoteSources().forEach{(_,source)->val identity=source.get("identity").asString;entries[identity]?.let{entry->try{api.fileVersion(connection,connection.path(entry.path),revision)}catch(e:IllegalStateException){if(e.message?.startsWith("文件已不存在：")==true)present.remove(identity)else throw e}}}
@@ -130,9 +135,10 @@ class RemoteActivity:Activity() {
             panel.addView(CheckBox(this).apply{text="${entry.title} · ${entry.author} · $status";setTextColor(ui.foreground);isChecked=entry.id in selected;setOnCheckedChangeListener{_,checked->if(checked)selected.add(entry.id)else selected.remove(entry.id)}})
         }
     }
-    private fun directory(path:String){run({val api=GitHubApi(preferences.token(false));JsonParser.parseString(api.file(connection,connection.path(path.trimEnd('/')),revision)).asJsonArray}){items->screenKind="directory";directoryPath=path;page("真实目录 / $path",up={if(path.isEmpty())home()else directory(path.trimEnd('/').substringBeforeLast('/',"").let{if(it.isEmpty())""else"$it/"})});panel.addView(ui.button("返回索引"){browse()});if(items.size()>=1000)panel.addView(ui.text("此目录可能未完整加载，请在 GitHub 查看完整目录。"));items.forEach{element->val item=element.asJsonObject;val name=item.get("name").asString;val type=item.get("type").asString;if(type=="dir")panel.addView(ui.button("目录 · $name"){directory(path+name+"/")})else panel.addView(ui.text(name))}}}
+    private fun directory(path:String){if(!ensureSource())return;run({val api=GitHubApi(preferences.token(false));JsonParser.parseString(api.file(connection,connection.path(path.trimEnd('/')),revision)).asJsonArray}){items->screenKind="directory";directoryPath=path;page("真实目录 / $path",up={if(path.isEmpty())home()else directory(path.trimEnd('/').substringBeforeLast('/',"").let{if(it.isEmpty())""else"$it/"})});panel.addView(ui.button("返回索引"){browse()});if(items.size()>=1000)panel.addView(ui.text("此目录可能未完整加载，请在 GitHub 查看完整目录。"));items.forEach{element->val item=element.asJsonObject;val name=item.get("name").asString;val type=item.get("type").asString;if(type=="dir")panel.addView(ui.button("目录 · $name"){directory(path+name+"/")})else panel.addView(ui.text(name))}}}
     private fun download(entries:List<RemoteLibrary.Entry>){
         if(entries.isEmpty())return
+        if(!ensureSource())return
         if(offline){ui.dialog().setMessage("请联网刷新后再下载").setPositiveButton("确定",null).show();return}
         val data=catalog?:return
         (application as ReaderApp).downloads.enqueue(connection,repositoryId,data.libraryId,revision,entries)

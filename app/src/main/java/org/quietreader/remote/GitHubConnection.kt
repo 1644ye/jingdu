@@ -16,7 +16,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-data class GitHubConnection(val owner:String="",val repo:String="reading-library",val branch:String="",val root:String="",val catalog:String="catalog.json") {
+data class GitHubConnection(val owner:String="",val repo:String="",val branch:String="",val root:String="",val catalog:String="catalog.json") {
     fun validate(){require(owner.matches(Regex("[A-Za-z0-9_-]+"))&&repo.matches(Regex("[A-Za-z0-9_.-]+"))){"仓库所有者或名称无效"};if(root.isNotBlank())org.quietreader.core.RemoteLibrary.path(root);org.quietreader.core.RemoteLibrary.path(catalog)}
     fun prefix()="/repos/${GitHubApi.segment(owner)}/${GitHubApi.segment(repo)}"
     fun path(value:String)=listOf(root.trim('/'),value).filter{it.isNotEmpty()}.joinToString("/")
@@ -26,7 +26,9 @@ data class GitHubConnection(val owner:String="",val repo:String="reading-library
 class RemotePreferences(private val context:Context) {
     private val preferences=context.getSharedPreferences("github-connections",Context.MODE_PRIVATE)
     private val gson=Gson()
-    fun connection(sync:Boolean):GitHubConnection=gson.fromJson(preferences.getString(if(sync)"state"else"library",null),GitHubConnection::class.java)?:GitHubConnection(repo=if(sync)"reading-state"else"reading-library")
+    fun connection(sync:Boolean):GitHubConnection=gson.fromJson(preferences.getString(if(sync)"state"else"library",null),GitHubConnection::class.java)?:GitHubConnection(owner=preferences.getString(if(sync)"state-user"else"library-user","").orEmpty())
+    fun loggedIn(sync:Boolean)=token(sync).isNotEmpty()
+    fun requireLogin(sync:Boolean):String=token(sync).also{require(it.isNotEmpty()){"请先登录自己的 GitHub 账号"}}
     fun save(sync:Boolean,value:GitHubConnection){value.validate();require(!value.owner.equals(connection(!sync).owner,true)||!value.repo.equals(connection(!sync).repo,true)){"书源和同步必须使用不同仓库"};if(!sync&&connection(false)!=value)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();preferences.edit().putString(if(sync)"state"else"library",gson.toJson(value)).putBoolean(if(sync)"state-valid"else"library-valid",true).commit();if(sync)pauseSync()}
     fun validated(sync:Boolean)=preferences.getBoolean(if(sync)"state-valid"else"library-valid",false)
     private fun pauseSync(){context.getSharedPreferences("progress-device",Context.MODE_PRIVATE).edit().putBoolean("enabled",false).putBoolean("paused",true).commit()}
@@ -40,9 +42,18 @@ class RemotePreferences(private val context:Context) {
         cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(parts[0],Base64.NO_WRAP)))
         return String(cipher.doFinal(Base64.decode(parts[1],Base64.NO_WRAP)),Charsets.UTF_8)
     }
-    fun login(sync:Boolean,token:String,login:String){if(!sync&&user(false)!=login)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key());val value=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)+":"+Base64.encodeToString(cipher.doFinal(token.toByteArray()),Base64.NO_WRAP);preferences.edit().putString(if(sync)"state-token"else"library-token",value).putString(if(sync)"state-user"else"library-user",login).commit();if(sync)pauseSync()}
+    fun login(sync:Boolean,token:String,login:String){
+        require(token.isNotBlank()&&login.isNotBlank()){"登录结果缺少账号或令牌"}
+        val changed=user(sync)!=login
+        if(!sync&&changed)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll()
+        val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key())
+        val value=Base64.encodeToString(cipher.iv,Base64.NO_WRAP)+":"+Base64.encodeToString(cipher.doFinal(token.toByteArray()),Base64.NO_WRAP)
+        preferences.edit().apply{if(changed){remove(if(sync)"state"else"library");remove(if(sync)"state-valid"else"library-valid")};putString(if(sync)"state-token"else"library-token",value);putString(if(sync)"state-user"else"library-user",login)}.commit()
+        if(!sync&&changed)java.io.File(context.noBackupFilesDir,"github-catalog.json").delete()
+        if(sync)pauseSync()
+    }
     fun user(sync:Boolean)=preferences.getString(if(sync)"state-user"else"library-user","未登录").orEmpty()
-    fun logout(sync:Boolean){if(!sync)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();preferences.edit().remove(if(sync)"state-token"else"library-token").remove(if(sync)"state-user"else"library-user").commit();if(sync)pauseSync()}
+    fun logout(sync:Boolean){if(!sync)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();preferences.edit().remove(if(sync)"state-token"else"library-token").remove(if(sync)"state-user"else"library-user").remove(if(sync)"state"else"library").remove(if(sync)"state-valid"else"library-valid").commit();if(sync)pauseSync()else java.io.File(context.noBackupFilesDir,"github-catalog.json").delete()}
 }
 
 class GitHubApi(private val token:String="",private val readJson:((String)->com.google.gson.JsonElement)?=null,private val openDownload:((URL)->HttpURLConnection)?=null) {

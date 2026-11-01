@@ -14,3 +14,8 @@ artifacts/instrumentation-20*.txt
 *.jks
 *.keystore
 keystore.properties
+artifacts/book-sources/
+artifacts/github-upload-*/
+artifacts/reading-library/catalog.json
+artifacts/reading-library/书籍说明.md
+artifacts/reading-library/books/小说/*-中文.json

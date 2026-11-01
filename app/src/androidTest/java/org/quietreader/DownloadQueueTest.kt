@@ -16,7 +16,7 @@ class DownloadQueueTest:AndroidTestCase(){
     private lateinit var folder:File
     private lateinit var isolated:Context
     private lateinit var store:LibraryStore
-    override fun setUp(){super.setUp();folder=File(context.cacheDir,"queue-test-"+java.util.UUID.randomUUID()).apply{mkdirs()};isolated=object:ContextWrapper(context){override fun getNoBackupFilesDir()=folder};store=LibraryStore(context,"download-queue-test.db")}
+    override fun setUp(){super.setUp();folder=File(context.cacheDir,"queue-test-"+java.util.UUID.randomUUID()).apply{mkdirs()};isolated=object:ContextWrapper(context){override fun getNoBackupFilesDir()=folder;override fun getApplicationContext():Context=this;override fun getSharedPreferences(name:String,mode:Int)=context.getSharedPreferences(folder.name+name,mode)};RemotePreferences(isolated).login(false,"fixture-token","test-reader");RemotePreferences(isolated).save(false,GitHubConnection("example-owner","books"));store=LibraryStore(context,"download-queue-test.db")}
     override fun tearDown(){store.close();context.deleteDatabase("download-queue-test.db");folder.walkBottomUp().forEach{it.delete()};super.tearDown()}
     private class Response(url:URL,private val status:Int,private val body:ByteArray,private val range:String?=null,private val failAfter:Int?=null):HttpURLConnection(url){
         override fun connect(){}
@@ -35,7 +35,7 @@ class DownloadQueueTest:AndroidTestCase(){
         assertEquals("fresh",target.readText())
     }
     fun testPausedTaskPersistsAndCompletedBookIsImportedOnce(){
-        val connection=RemotePreferences(context).connection(false)
+        val connection=RemotePreferences(isolated).connection(false)
         val queue=DownloadQueue(isolated,store)
         val entry=RemoteLibrary.Entry("book","book.json","任务书","作者","novel",emptyList(),500)
         queue.enqueue(connection,"repo","library","commit",listOf(entry));val id=queue.tasks().single().get("id").asString
@@ -56,8 +56,15 @@ class DownloadQueueTest:AndroidTestCase(){
         processor.process{false};assertEquals(1,store.listBooks().size)
     }
     fun testCancelSurvivesReopen(){
-        val queue=DownloadQueue(isolated,store);queue.enqueue(RemotePreferences(context).connection(false),"repo","library","commit",listOf(RemoteLibrary.Entry("a","a.json","书","","novel",emptyList(),5)))
+        val queue=DownloadQueue(isolated,store);queue.enqueue(RemotePreferences(isolated).connection(false),"repo","library","commit",listOf(RemoteLibrary.Entry("a","a.json","书","","novel",emptyList(),5)))
         queue.cancelAll()
         assertEquals("cancelled",DownloadQueue(isolated,store).tasks().single().get("state").asString)
+    }
+    fun testBackgroundDownloadCannotUseAnUnauthenticatedAccount(){
+        RemotePreferences(isolated).logout(false)
+        val queue=DownloadQueue(isolated,store){error("Must not open a connection before login")}
+        queue.enqueue(RemotePreferences(isolated).connection(false),"repo","library","commit",listOf(RemoteLibrary.Entry("a","a.json","书","","novel",emptyList(),5)))
+        queue.process{false};val task=queue.tasks().single()
+        assertEquals("failed",task.get("state").asString);assertTrue(task.get("error").asString.contains("请先登录自己的"));assertTrue(store.listBooks().isEmpty())
     }
 }
