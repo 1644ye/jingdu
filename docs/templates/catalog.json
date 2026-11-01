@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "libraryId": "my-library",
+  "books": [
+    {
+      "id": "book-poetry-demo",
+      "path": "books/poetry-example.json",
+      "title": "诗歌示例集",
+      "author": "李白",
+      "type": "poetry",
+      "tags": [
+        "唐诗",
+        "示例"
+      ]
+    },
+    {
+      "id": "book-novel-demo",
+      "path": "books/novel-example.json",
+      "title": "山城来信",
+      "author": "示例作者",
+      "type": "novel",
+      "tags": [
+        "小说",
+        "示例"
+      ]
+    }
+  ]
+}
