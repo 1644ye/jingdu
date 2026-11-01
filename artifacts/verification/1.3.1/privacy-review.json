@@ -1,0 +1,23 @@
+{
+  "freshConnection": "no preset owner or repository",
+  "existingSettings": "preserved on upgrade and same-account authorization",
+  "accountSwitch": "repository selection reset per role; books retained",
+  "history": "all commit authors and committers anonymized; historical text redacted",
+  "apk": "no preset book/progress repositories or personal identifiers outside public project update address",
+  "releaseBuild": "non-debuggable; original signing identity; version 1.3.1, code 10",
+  "verification": {
+    "androidFull": 71,
+    "androidRelease": 17,
+    "coreCached": 42,
+    "lintErrors": 0,
+    "lintWarnings": 28
+  },
+  "publicIdentifiersRetained": [
+    "project update repository",
+    "OAuth application public Client IDs"
+  ],
+  "limitations": [
+    "GitHub cache and third-party clones are not removed by history rewriting",
+    "live third-party account authorization still requires browser approval"
+  ]
+}
