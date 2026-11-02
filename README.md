@@ -18,7 +18,7 @@
 ## 1. 安装应用
 
 - [下载最新版本及查看更新说明](https://github.com/1644ye/jingdu/releases/latest)
-- [直接下载 1.4.0 APK](https://github.com/1644ye/jingdu/releases/download/v1.4.0/QuietReader-1.4.0.apk)
+- [直接下载 1.4.1 APK](https://github.com/1644ye/jingdu/releases/download/v1.4.1/QuietReader-1.4.1.apk)
 - [下载当前 main 分支源码 ZIP](https://github.com/1644ye/jingdu/archive/refs/heads/main.zip)
 
 把 APK 下载到 Android 设备后打开，按系统提示安装；系统要求时，允许浏览器或文件管理器“安装未知应用”。更新现有安装时直接覆盖安装，保留原应用数据。
@@ -52,6 +52,8 @@ App 内也有“更多 → 下载模板”入口。
 填写正文时保留根节点的 `schemaVersion: 1` 和 `kind: "ebook-library"`。书籍和篇章、诗行、段落需要稳定且不重复的 ID；更新既有内容时保留原 ID，新增内容再使用新 ID。诗集模板包含逐行拼音、译文、注释，以及全诗背景、译文和赏析的完整填写示例；小说可使用卷、章和正文段落。
 
 阅读诗集时点工具栏“辅助”，可分别设置拼音、逐行译文、注释、创作背景、全诗译文和赏析：隐藏、小字、正文大小、点击链接浮现。设置立即保存，可随时切回只显示原文；缺少的内容不会自动生成。目录显示“阅读中”和“已读”：翻到该篇最后一页或在滚动模式看到最后一行／段落末尾后记为已读，跳过的篇章保持未读。篇章记录进入本地备份；GitHub 仍只同步既有的书籍进度和阅读状态。
+
+“辅助”页会显示本篇实际提供的内容数量。显示“本篇未提供”时，需要刷新书源并更新书籍正文，或重新导入含对应字段的 JSON；仅安装新版 APK 不会给旧正文补入拼音。全局阅读设置也使用相同的六类四种显示方式；已有单书设置的书籍可在阅读设置恢复为全局。[拼音与辅助内容排查步骤](docs/releases/v1.4.1.md)
 
 **GitHub 书源要求一份 JSON 文件恰好一本书**；本地导入可以一份 JSON 包含多本。
 
@@ -318,7 +320,7 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w org.quietreader.test/android.test.InstrumentationTestRunner
 ```
 
-1.4.0 的非调试 Release 已通过全部 90 项 Android 回归；43 项核心测试、22 项独立 Schema 检查通过，Release Lint 0 错误／28 警告。书架切换、辅助内容、目录已读与备份的结果及手机验收步骤见 [1.4.0 验证记录](docs/1.4.0书架与辅助阅读.md)。真实第三方账号授权、双设备联网同步及厂商后台行为仍需在相应设备验收，范围见[自动续期记录](docs/1.3.2自动续期.md)和[验收报告](ACCEPTANCE.md)。
+1.4.1 的非调试 Release 已通过全部 96 项 Android 回归，包含六类辅助内容的48种阅读／显示组合和短诗切换后的原位恢复；43项核心测试复用通过结果，Release Lint 0错误／28警告。详情见 [1.4.1 验证记录](docs/1.4.1辅助内容显示.md)。Schema未改动，沿用1.4.0的22项独立检查结果。真实第三方账号授权、双设备联网同步及厂商后台行为仍需在相应设备验收，范围见[自动续期记录](docs/1.3.2自动续期.md)和[验收报告](ACCEPTANCE.md)。
 
 ## 更多资料
 

@@ -1,0 +1,12 @@
+Version: 1.4.1 (13)
+Android API 36; non-debuggable Release installed
+Android regression: 96 passed, 0 failures, 93.37 seconds
+Auxiliary display: 6 kinds x 4 display modes x 2 reading modes = 48 combinations passed
+Second and final short poem anchors preserved through mode changes and adjacent content insertion
+Missing fields are reported; preferences retained
+Import/update/storage/backup retain all 6 auxiliary kinds and pinyin diacritics
+Global controls reflect effective display modes
+Core: 43 passing results reused by Gradle (unchanged)
+Schema: unchanged; 22 prior checks remain applicable
+Release lint: 0 errors, 28 warnings
+Build: Debug/Release/AndroidTest successful

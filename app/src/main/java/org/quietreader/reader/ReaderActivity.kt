@@ -231,21 +231,22 @@ class ReaderActivity : Activity() {
                 val part=pageFor(anchor,pages).coerceIn(0,pages.lastIndex.coerceAtLeast(0))
                 val unit=ScrollUnit(target,part,pages[part]);scrollUnits.add(unit)
                 scroll = ScrollView(this).apply { isFillViewport = true; isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(dp(settings.margin),dp(12),dp(settings.margin),dp(12)) }
-                content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; isClickable = true; setOnClickListener { toggleToolbar() } }
+                // Leave enough trailing space to restore even the last short poem at its original line.
+                content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL;setPadding(0,0,0,(host.height-dp(24)).coerceAtLeast(0));isClickable = true; setOnClickListener { toggleToolbar() } }
                 scroll.addView(content,FrameLayout.LayoutParams(-1,-2)); host.addView(scroll,FrameLayout.LayoutParams(-1,-1))
                 content.addView(unitView(unit))
                 scroll.setOnScrollChangeListener { _, _, _, _, _ ->
                     if (!restoring && !busy) {
                         schedulePositionSave(); updateStatus()
-                        if (scroll.scrollY + scroll.height >= content.height-dp(300)) extendWindow(true)
+                        if (scroll.scrollY + scroll.height >= scrollContentEnd()-dp(300)) extendWindow(true)
                         else if (scroll.scrollY < dp(80)) extendWindow(false)
                     }
                 }
-                scroll.post {
+                afterContentLayout(request) {
                     restoreScroll(anchor)
                     restoring = false; updateStatus(); schedulePositionSave()
                     if(scroll.scrollY<dp(80) && (part>0 || target>0))extendWindow(false)
-                    else if(scroll.scrollY+scroll.height >= content.height-dp(300)) extendWindow(true)
+                    else if(scroll.scrollY+scroll.height >= scrollContentEnd()-dp(300)) extendWindow(true)
                 }
             }
             titleView.text = bookTitle
@@ -267,6 +268,19 @@ class ReaderActivity : Activity() {
             val tv = textView(slice.block,slice.start,slice.end)
             addView(tv,LinearLayout.LayoutParams(-1,slice.height).apply { topMargin=slice.before; bottomMargin=slice.after })
         }
+    }
+
+    private fun scrollContentEnd()=content.height-content.paddingBottom
+
+    private fun afterContentLayout(request:Int,action:()->Unit){
+        val target=content
+        target.viewTreeObserver.addOnPreDrawListener(object:android.view.ViewTreeObserver.OnPreDrawListener{
+            override fun onPreDraw():Boolean{
+                if(target.viewTreeObserver.isAlive)target.viewTreeObserver.removeOnPreDrawListener(this)
+                if(request==generation&&!isDestroyed)action()
+                return true
+            }
+        })
     }
 
     private fun extendWindow(forward: Boolean,step:Boolean=false) {
@@ -312,12 +326,12 @@ class ReaderActivity : Activity() {
             }
             windowStart=scrollUnits.first().section;windowEnd=scrollUnits.last().section
             synchronized(scrollPageCache){val retain=scrollUnits.map{it.section}.toSet();scrollPageCache.keys.toList().filter{it !in retain}.forEach{scrollPageCache.remove(it)}}
-            content.post {
+            afterContentLayout(request) {
                 // Pixels are only a transient insertion adjustment; persisted positions use IDs/offsets.
                 scroll.scrollTo(0,beforeY+(if(!forward)view.height else 0)-removedHeight)
                 restoring=false;busy=false;updateStatus();schedulePositionSave()
                 if(step)scroll.smoothScrollBy(0,((if(forward)1 else -1)*scroll.height*.85f).toInt())
-                if(scroll.scrollY+scroll.height>=content.height-dp(100)) extendWindow(true)
+                if(scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
             }
         }
     }
@@ -357,7 +371,7 @@ class ReaderActivity : Activity() {
         }
         return TextView(this).apply {
             text=value;setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,spPixels(ReaderPaginator.size(settings,block.role)));typeface=ReaderPaginator.face(settings,block.role)
-            setTextColor(if(block.role in listOf("aux","meta","separator")) secondary else this@ReaderActivity.foreground)
+            setTextColor(if(block.role in listOf("aux","meta","separator","notice")) secondary else this@ReaderActivity.foreground)
             includeFontPadding=false;setPadding(0,0,0,0);setLineSpacing(0f,settings.lineSpacing)
             textDirection=View.TEXT_DIRECTION_FIRST_STRONG_LTR
             if(android.os.Build.VERSION.SDK_INT>=28)setFallbackLineSpacing(true)
@@ -392,8 +406,9 @@ class ReaderActivity : Activity() {
             if(block.role!="empty")setOnClickListener {
                 if(selecting)return@setOnClickListener
                 if(block.role=="link"){
-                    val text=TextView(this@ReaderActivity).apply{this.text=block.popup;textSize=settings.fontSize;setPadding(dp(18),dp(12),dp(18),dp(12));setTextIsSelectable(true)}
-                    AlertDialog.Builder(this@ReaderActivity).setTitle(block.popupTitle).setView(ScrollView(this@ReaderActivity).apply{addView(text)}).setPositiveButton("关闭",null).show()
+                    val helper=Ui(this@ReaderActivity,settings)
+                    val text=helper.text(block.popup,settings.fontSize).apply{setPadding(dp(18),dp(12),dp(18),dp(12));setBackgroundColor(helper.background);setTextIsSelectable(true)}
+                    helper.dialog().setTitle(block.popupTitle).setView(helper.scroll(text).apply{setBackgroundColor(helper.background)}).setPositiveButton("关闭",null).show()
                 }else if(block.role=="poem"){
                     if(expandedLines.contains(block.contentId))expandedLines.remove(block.contentId)else expandedLines.add(block.contentId)
                     rebuild(captureAnchor())
@@ -493,7 +508,7 @@ class ReaderActivity : Activity() {
     }
     private fun nextPage(){
         if(busy)return
-        if(settings.mode=="scroll") {if(::scroll.isInitialized && scroll.scrollY+scroll.height<content.height+scroll.paddingTop+scroll.paddingBottom)scroll.smoothScrollBy(0,(scroll.height*.85f).toInt())else extendWindow(true,true);return}
+        if(settings.mode=="scroll") {if(::scroll.isInitialized && scroll.scrollY+scroll.height<scrollContentEnd()+scroll.paddingTop+scroll.paddingBottom)scroll.smoothScrollBy(0,(scroll.height*.85f).toInt())else extendWindow(true,true);return}
         if(pageIndex<pageList.lastIndex){pageIndex++;showPage()} else navigateSection(sectionIndex+1)
     }
     private fun navigateSection(index: Int,lastPage: Boolean=false){
@@ -687,11 +702,17 @@ class ReaderActivity : Activity() {
 
     private fun showAuxiliarySettings(){
         if(!poetry)return
+        val index=sectionIndex
+        runWork({loadSection(index)}){section->showAuxiliarySettings(section)}
+    }
+    private fun showAuxiliarySettings(section:JsonObject){
         val helper=Ui(this,settings);val panel=helper.panel()
-        panel.addView(helper.text("各项独立保存；链接模式点击带下划线的标签弹出内容。",14f))
+        panel.addView(helper.text("本篇：${section.get("title").asString}。各项独立保存；链接模式点击下划线标签查看。",14f))
+        panel.addView(helper.text("切换显示方式不会补写正文。未提供的内容需更新书籍或重新导入；本书设置可在阅读设置中恢复为全局。",13f))
         val values=listOf("hidden","small","inline","link")
-        listOf("pinyin" to "拼音","translation" to "逐行译文","note" to "逐行注释","background" to "创作背景","poemTranslation" to "全诗译文","appreciation" to "赏析").forEach{(kind,title)->
-            panel.addView(helper.text(title,16f,true));panel.addView(helper.spinner(listOf("隐藏","小字显示","正文大小","点击链接浮现"),values.indexOf(settings.auxiliaryMode(kind))){index->expandedLines.clear();changeSettings(settings.withAuxiliaryMode(kind,values[index]))}.apply{contentDescription="$title 显示形式"})
+        val counts=ReaderDocument.auxiliaryCounts(section)
+        ReaderDocument.auxiliaryLabels.forEach{(kind,title)->
+            panel.addView(helper.text("$title · ${counts[kind]?.takeIf{it>0}?.let{"本篇 $it 处"}?:"本篇未提供"}",16f,true));panel.addView(helper.spinner(listOf("隐藏","小字显示","正文大小","点击链接浮现"),values.indexOf(settings.auxiliaryMode(kind))){index->expandedLines.clear();changeSettings(settings.withAuxiliaryMode(kind,values[index]))}.apply{contentDescription="$title 显示形式"})
         }
         panel.addView(helper.button("只显示原文"){expandedLines.clear();changeSettings(settings.originalOnly())})
         helper.dialog().setTitle("辅助内容显示").setView(helper.scroll(panel)).setPositiveButton("完成",null).show()

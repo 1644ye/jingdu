@@ -90,6 +90,18 @@ class MainActivityFlowTest:ActivityInstrumentationTestCase2<MainActivity>(MainAc
             await("返回本书详情而非直接退回书架"){onUi{all(restored!!.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="编辑信息"}}}
         }finally{restored?.let{screen->instrumentation.runOnMainSync{screen.finish()}};instrumentation.removeMonitor(monitor)}
     }
+    fun testGlobalAuxiliaryControlsReflectExplicitModesInsteadOfLegacyFlags(){
+        val configured=ReadingSettings(showPinyin=false,pinyinDisplay="link",showNotes=false,notesDisplay="inline")
+        store.saveSettings(configured);val main=activity
+        await("书架初始化"){onUi{all(main.window.decorView).filterIsInstance<Button>().any{it.text.toString()=="更多"}}}
+        onUi{main.javaClass.getDeclaredMethod("navigate",String::class.java,String::class.java).apply{isAccessible=true}.invoke(main,"settings",null)}
+        await("六个全局显示控件应反映实际模式"){
+            onUi{val spinners=all(main.window.decorView).filterIsInstance<android.widget.Spinner>()
+                spinners.firstOrNull{it.contentDescription=="全局拼音 显示形式"}?.selectedItem=="点击链接浮现"&&spinners.firstOrNull{it.contentDescription=="全局逐行注释 显示形式"}?.selectedItem=="正文大小"&&spinners.count{it.contentDescription?.startsWith("全局")==true}==6}
+        }
+        onUi{all(main.window.decorView).filterIsInstance<android.widget.Spinner>().first{it.contentDescription=="全局拼音 显示形式"}.setSelection(1)}
+        await("全局拼音新模式应保存"){store.settings().pinyinDisplay=="small"}
+    }
     private fun all(view:View):List<View> = buildList{add(view);if(view is ViewGroup)for(i in 0 until view.childCount)addAll(all(view.getChildAt(i)))}
     private fun <T> onUi(block:()->T):T {val result=AtomicReference<T>();instrumentation.runOnMainSync{result.set(block())};return result.get()}
     private fun await(message:String,condition:()->Boolean){val end=System.currentTimeMillis()+20000;while(System.currentTimeMillis()<end){instrumentation.waitForIdleSync();if(condition())return;Thread.sleep(100)};fail(message)}

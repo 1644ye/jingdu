@@ -31,6 +31,8 @@
 
 阅读工具栏“辅助”分别管理六类内容，每项可选隐藏、小字显示、正文大小、点击链接浮现。链接显示为带下划线的标签，点击在可滚动弹窗里查看完整内容。隐藏模式不会因点击原文而展开；旧版设置仍保留点击诗行展开辅助内容的行为，明确选择显示方式后按新设置显示。更改显示方式不改变正文 ID、原文、书签和笔记坐标。
 
+“辅助”页按当前诗作统计每类非空内容的数量；空字符串和省略字段均视为未提供。显示方式已开启但当前诗作没有对应内容时，正文给出缺项提示并保留设置，不自动生成拼音或其他文字。逐行 `translation` 与诗作级 `translation` 分别计数、分别控制。
+
 备份中的 `ReadingSettings` 可选增加 `pinyinDisplay`、`translationDisplay`、`notesDisplay`、`backgroundDisplay`、`poemTranslationDisplay`、`appreciationDisplay`。取值为 `legacy`、`hidden`、`small`、`inline`、`link`；省略按 `legacy` 处理，沿用旧版显示开关。篇章阅读历史存放在备份 `metadata` 中的 `remote:read:书籍ID`，值是序列化 JSON 字符串，篇章 ID 对应 `reading` 或 `read`。仅实际打开／到达末尾的篇章更新标记，不推断跳过的篇章已读；所选备份仅包含所选书籍的记录。
 
 ## ID 与更新

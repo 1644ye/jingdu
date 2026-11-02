@@ -47,6 +47,16 @@ data class ReaderPage(val slices: List<ReaderSlice>)
 object ReaderDocument {
     private fun JsonObject.str(key: String) = get(key)?.takeIf { !it.isJsonNull }?.asString.orEmpty()
 
+    val auxiliaryLabels = linkedMapOf("pinyin" to "拼音", "translation" to "逐行译文", "note" to "逐行注释", "background" to "创作背景", "poemTranslation" to "全诗译文", "appreciation" to "赏析")
+
+    fun auxiliaryCounts(section: JsonObject): Map<String, Int> {
+        val lines=section.getAsJsonArray("stanzas")?.flatMap{it.asJsonObject.getAsJsonArray("lines").map{line->line.asJsonObject}}.orEmpty()
+        return auxiliaryLabels.keys.associateWith{kind->when(kind){
+            "pinyin","translation","note"->lines.count{it.str(kind).isNotBlank()}
+            else->if(section.str(if(kind=="poemTranslation")"translation"else kind).isNotBlank())1 else 0
+        }}
+    }
+
     fun blocks(section: JsonObject, poetry: Boolean, settings: ReadingSettings, expanded: Set<String>): List<ReaderBlock> {
         val sid = section.str("id")
         val originals=Content.texts(section,if(poetry)"poetry"else"novel")
@@ -71,6 +81,9 @@ object ReaderDocument {
                 val tags=section.getAsJsonArray("tags")?.joinToString(" · "){it.asString}.orEmpty()
                 val meta = listOf(section.str("dynasty"), section.str("author"), section.str("genre"),tags).filter { it.isNotEmpty() }.joinToString(" · ")
                 if (meta.isNotEmpty()) add(auxiliary(meta,"meta"))
+                val counts=auxiliaryCounts(section)
+                val missing=auxiliaryLabels.filter{(kind,_)->settings.auxiliaryMode(kind)!="hidden"&&counts[kind]==0}.values
+                if(missing.isNotEmpty())add(auxiliary("本篇未提供：${missing.joinToString("、")}。请更新书籍正文，或导入含这些内容的 JSON；显示设置已保留。","notice",8f))
                 section.getAsJsonArray("stanzas")?.forEachIndexed { stanzaIndex, stanza ->
                     stanza.asJsonObject.getAsJsonArray("lines")?.forEachIndexed { lineIndex, element ->
                         val line = element.asJsonObject
@@ -115,7 +128,7 @@ object ReaderPaginator {
     fun size(settings: ReadingSettings, role: String): Float = settings.fontSize * when(role) {
         "title" -> 1.25f
         "heading" -> 1.1f
-        "meta", "aux", "link" -> .78f
+        "meta", "aux", "link", "notice" -> .78f
         "analysis" -> .9f
         else -> 1f
     }

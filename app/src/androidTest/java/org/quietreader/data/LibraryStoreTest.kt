@@ -14,6 +14,20 @@ import org.quietreader.core.ReadingSettings
 /** Exercises Android SQLite itself, including rollback, foreign keys, migration and durable reopen. */
 @Suppress("DEPRECATION")
 class LibraryStoreTest : AndroidTestCase() {
+    fun testAllAuxiliaryContentSurvivesUpdatingOldBookAndBackup(){
+        val old=poetry("aux-update");val oldLine=old.getAsJsonArray("poems")[0].asJsonObject.getAsJsonArray("stanzas")[0].asJsonObject.getAsJsonArray("lines")[0].asJsonObject
+        oldLine.remove("pinyin");store.importFile(Protocol.wrap(listOf(old)))
+        store.saveSettings(ReadingSettings(pinyinDisplay="link",notesDisplay="small"),"aux-update")
+        val updated=old.deepCopy();val poem=updated.getAsJsonArray("poems")[0].asJsonObject
+        val line=poem.getAsJsonArray("stanzas")[0].asJsonObject.getAsJsonArray("lines")[0].asJsonObject
+        line.addProperty("pinyin","chuáng qián míng yuè guāng · ǖ ǘ ǚ ǜ");line.addProperty("translation","明亮的月光");line.addProperty("note","床：卧具")
+        poem.addProperty("background","旅夜思乡");poem.addProperty("translation","月光引起思乡");poem.addProperty("appreciation","借景抒情")
+        store.importFile(Protocol.wrap(listOf(updated)),mapOf("aux-update" to "update"))
+        val expected=Protocol.validate(Protocol.wrap(listOf(updated)),"updated.json").document!!.getAsJsonArray("books")[0].asJsonObject
+        assertEquals(expected,store.book("aux-update"));assertEquals("link",store.settings("aux-update").pinyinDisplay)
+        val backup=store.backup();store.restoreBackup(backup);store.close();store=LibraryStore(context,databaseName)
+        assertEquals(expected,store.book("aux-update"))
+    }
     fun testSectionReadHistoryDoesNotMarkSkippedSectionsAndSurvivesSelectedBackup(){
         val a=novel("history-a")
         val chapters=a.getAsJsonArray("chapters")

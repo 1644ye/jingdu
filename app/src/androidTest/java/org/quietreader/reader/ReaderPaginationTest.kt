@@ -7,6 +7,30 @@ import org.quietreader.core.ReadingSettings
 /** Run on Android: these exercise the platform's real font shaping and StaticLayout. */
 @Suppress("DEPRECATION")
 class ReaderPaginationTest : AndroidTestCase() {
+    fun testAllSixAuxiliaryKindsSupportEveryModeAndMissingContentIsExplained(){
+        val poem=JsonParser.parseString("""{"id":"p","title":"题","background":"写作背景","translation":"全诗译文内容","appreciation":"赏析内容","stanzas":[{"id":"s","lines":[{"id":"l","original":"明月。","pinyin":"ā á ǎ à ē é ě è ī í ǐ ì ō ó ǒ ò ū ú ǔ ù ǖ ǘ ǚ ǜ","translation":"逐行译文内容","note":"逐行注释内容"}]}]}""").asJsonObject
+        assertTrue(ReaderDocument.auxiliaryCounts(poem).values.all{it==1})
+        ReaderDocument.auxiliaryLabels.keys.forEach{kind->
+            listOf("hidden","small","inline","link").forEach{mode->
+                val blocks=ReaderDocument.blocks(poem,true,ReadingSettings().originalOnly().withAuxiliaryMode(kind,mode),emptySet())
+                assertFalse(blocks.any{it.role=="notice"})
+                val auxiliary=blocks.filter{it.role in listOf("aux","aux-inline","link")}
+                if(mode=="hidden")assertTrue(auxiliary.isEmpty())else{
+                    assertEquals(1,auxiliary.size);val block=auxiliary.single()
+                    assertEquals(when(mode){"small"->"aux";"inline"->"aux-inline";else->"link"},block.role)
+                    assertEquals("l",block.contentId)
+                    if(mode=="link")assertTrue(block.popup.isNotBlank())
+                    val slices=pages(listOf(block),width=110,height=80).flatMap{it.slices}
+                    assertEquals(block.text,slices.joinToString(""){it.block.text.substring(it.start,it.end)})
+                }
+            }
+        }
+        val missing=poem.deepCopy();missing.getAsJsonArray("stanzas")[0].asJsonObject.getAsJsonArray("lines")[0].asJsonObject.remove("pinyin")
+        val setting=ReadingSettings().originalOnly().copy(pinyinDisplay="small")
+        assertEquals(0,ReaderDocument.auxiliaryCounts(missing)["pinyin"])
+        assertTrue(ReaderDocument.blocks(missing,true,setting,emptySet()).single{it.role=="notice"}.text.contains("本篇未提供：拼音"))
+        assertFalse(ReaderDocument.blocks(missing,true,setting.copy(pinyinDisplay="hidden"),emptySet()).any{it.role=="notice"})
+    }
     fun testIndependentAuxiliaryModesKeepOriginalAnchorsAndPopupBody(){
         val poem=JsonParser.parseString("""{"id":"p","title":"题","background":"夜晚思乡的背景","translation":"全诗译文","appreciation":"借景抒情","stanzas":[{"id":"s","lines":[{"id":"l","original":"明月。","pinyin":"míng yuè","translation":"明亮的月光","note":"月：月亮"}]}]}""").asJsonObject
         val settings=ReadingSettings(pinyinDisplay="small",translationDisplay="hidden",notesDisplay="link",backgroundDisplay="inline",poemTranslationDisplay="link",appreciationDisplay="hidden")
