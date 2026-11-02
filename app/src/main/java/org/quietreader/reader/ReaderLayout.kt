@@ -21,6 +21,8 @@ data class ReaderBlock(
     val spaceBefore: Float = 0f,
     val selectable: Boolean = true,
     val original: String = text,
+    val popup: String = "",
+    val popupTitle: String = "",
 ) {
     val isOriginal get() = role == "body" || role == "poem" || role == "heading"
 }
@@ -55,6 +57,15 @@ object ReaderDocument {
             return ReaderBlock(sid,target?.key.orEmpty(),text,role,before,false,target?.value.orEmpty())
         }
         return buildList {
+            fun addAuxiliary(value:String,kind:String,label:String,id:String,original:String,expanded:Boolean=false,atEnd:Boolean=false){
+                if(value.isBlank())return
+                var mode=settings.auxiliaryMode(kind)
+                val legacy=when(kind){"pinyin"->settings.pinyinDisplay;"translation"->settings.translationDisplay;"note"->settings.notesDisplay;else->"explicit"}
+                if(expanded&&legacy=="legacy")mode="small"
+                if(mode=="hidden")return
+                if(mode=="link")add(ReaderBlock(sid,id,"〔$label〕","link",if(atEnd)12f else 0f,false,original,value,label))
+                else add(ReaderBlock(sid,id,"$label　$value",if(mode=="inline")"aux-inline"else"aux",if(atEnd)12f else 0f,false,original))
+            }
             add(auxiliary(section.str("title"),"title"))
             if (poetry) {
                 val tags=section.getAsJsonArray("tags")?.joinToString(" · "){it.asString}.orEmpty()
@@ -67,20 +78,11 @@ object ReaderDocument {
                         val original = line.str("original")
                         if (settings.showOriginal) add(ReaderBlock(sid, id, original, "poem", if (lineIndex == 0 && stanzaIndex > 0) 20f else 0f))
                         val open = id in expanded
-                        listOf(Triple("pinyin", settings.showPinyin || open, "拼音"), Triple("translation", settings.showTranslation || open, "译文"), Triple("note", settings.showNotes || open, "注释")).forEach { (key, visible, label) ->
-                            val value = line.str(key)
-                            if (visible && value.isNotEmpty()) add(ReaderBlock(sid, id, "$label　$value", "aux", original = original, selectable = false))
-                        }
+                        listOf("pinyin" to "拼音","translation" to "译文","note" to "注释").forEach{(key,label)->addAuxiliary(line.str(key),key,label,id,original,open)}
                     }
                 }
-                if (settings.showAnalysis) listOf("background" to "创作背景", "translation" to "全诗译文", "appreciation" to "赏析").forEach { (key, label) ->
-                    val value = section.str(key)
-                    if (value.isNotEmpty()) {
-                        add(auxiliary(label,"meta",18f,true))
-                        add(auxiliary(value,"analysis",atEnd=true))
-                    }
-                }
-                if(none{it.isOriginal || it.role=="aux" || it.role=="analysis"}) {
+                listOf(Triple("background","background","创作背景"),Triple("translation","poemTranslation","全诗译文"),Triple("appreciation","appreciation","赏析")).forEach{(key,kind,label)->addAuxiliary(section.str(key),kind,label,last?.key.orEmpty(),last?.value.orEmpty(),atEnd=true)}
+                if(none{it.isOriginal || it.role in listOf("aux","analysis","aux-inline","link")}) {
                     add(auxiliary("当前显示设置下没有正文，请在更多中切换纯原文。\n点击这里恢复原文。","empty",18f))
                 }
             } else {
@@ -113,7 +115,7 @@ object ReaderPaginator {
     fun size(settings: ReadingSettings, role: String): Float = settings.fontSize * when(role) {
         "title" -> 1.25f
         "heading" -> 1.1f
-        "meta", "aux" -> .78f
+        "meta", "aux", "link" -> .78f
         "analysis" -> .9f
         else -> 1f
     }

@@ -7,6 +7,19 @@ import org.quietreader.core.ReadingSettings
 /** Run on Android: these exercise the platform's real font shaping and StaticLayout. */
 @Suppress("DEPRECATION")
 class ReaderPaginationTest : AndroidTestCase() {
+    fun testIndependentAuxiliaryModesKeepOriginalAnchorsAndPopupBody(){
+        val poem=JsonParser.parseString("""{"id":"p","title":"题","background":"夜晚思乡的背景","translation":"全诗译文","appreciation":"借景抒情","stanzas":[{"id":"s","lines":[{"id":"l","original":"明月。","pinyin":"míng yuè","translation":"明亮的月光","note":"月：月亮"}]}]}""").asJsonObject
+        val settings=ReadingSettings(pinyinDisplay="small",translationDisplay="hidden",notesDisplay="link",backgroundDisplay="inline",poemTranslationDisplay="link",appreciationDisplay="hidden")
+        val blocks=ReaderDocument.blocks(poem,true,settings,setOf("l"))
+        assertEquals(listOf("明月。"),blocks.filter{it.isOriginal}.map{it.text})
+        assertEquals(1,blocks.count{it.role=="aux"});assertEquals(1,blocks.count{it.role=="aux-inline"})
+        assertFalse(blocks.any{it.text.contains("明亮的月光")||it.text.contains("借景抒情")})
+        val links=blocks.filter{it.role=="link"};assertEquals(2,links.size)
+        assertEquals("月：月亮",links.first().popup)
+        links.forEach{assertEquals("l",it.contentId);assertEquals("明月。",it.original);assertFalse(it.selectable)}
+        assertTrue(ReaderDocument.blocks(poem,true,settings.originalOnly(),setOf("l")).none{it.role in listOf("aux","aux-inline","link")})
+        assertEquals("small",ReadingSettings(showNotes=true).auxiliaryMode("note"))
+    }
     private fun pages(blocks: List<ReaderBlock>, settings: ReadingSettings = ReadingSettings(mode="paged"), width: Int=320, height: Int=420) =
         ReaderPaginator.paginate(blocks,settings,width,height,1f,1f)
 

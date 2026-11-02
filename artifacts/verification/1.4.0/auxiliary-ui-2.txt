@@ -1,0 +1,5 @@
+org.quietreader.reader.ReaderAuxiliaryFlowTest:..
+Test results for InstrumentationTestRunner=..
+Time: 4.737
+
+OK (2 tests)

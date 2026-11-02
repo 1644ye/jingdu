@@ -16,7 +16,20 @@
               "type": "paragraph",
               "text": "填写小说正文。"
             }
-          ]
+          ],
+          "volumeId": "volume-1"
+        }
+      ],
+      "author": "填写作者",
+      "language": "zh-CN",
+      "description": "填写小说简介。小说正文使用 chapters / blocks，不添加诗集专用字段。",
+      "tags": [
+        "小说"
+      ],
+      "volumes": [
+        {
+          "id": "volume-1",
+          "title": "第一卷（不分卷时可删除）"
         }
       ]
     }

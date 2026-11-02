@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.1.0">
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="        preferences.edit().putLong(&quot;download-id&quot;,id).putString(&quot;download-version&quot;,release.version).commit()"
+        errorLine2="                                                                                                   ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\update\AppUpdater.kt"
+            line="71"
+            column="100"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="    @Synchronized fun cancelDownload(){downloadState()?.let{manager.remove(it.id)};preferences.edit().remove(&quot;download-id&quot;).remove(&quot;download-version&quot;).commit()}"
+        errorLine2="                                                                                                                                                       ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\update\AppUpdater.kt"
+            line="74"
+            column="152"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="        appContext.getSharedPreferences(&quot;progress-device&quot;,Context.MODE_PRIVATE).edit().putBoolean(&quot;paused&quot;,true).commit()"
+        errorLine2="                                                                                                                 ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\data\LibraryStore.kt"
+            line="586"
+            column="114"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="        prefs.edit().putLong(&quot;lastSuccess&quot;,System.currentTimeMillis()).commit()"
+        errorLine2="                                                                       ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\ProgressSync.kt"
+            line="76"
+            column="72"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="    private fun pauseSync(){context.getSharedPreferences(&quot;progress-device&quot;,Context.MODE_PRIVATE).edit().putBoolean(&quot;enabled&quot;,false).putBoolean(&quot;paused&quot;,true).commit()}"
+        errorLine2="                                                                                                                                                              ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemotePreferences.kt"
+            line="34"
+            column="159"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="    fun save(sync:Boolean,value:GitHubConnection){value.validate();require(!value.owner.equals(connection(!sync).owner,true)||!value.repo.equals(connection(!sync).repo,true)){&quot;书源和同步必须使用不同仓库&quot;};if(!sync&amp;&amp;connection(false)!=value)(context.applicationContext as? org.quietreader.ReaderApp)?.downloads?.cancelAll();preferences.edit().putString(role(sync),gson.toJson(value)).putBoolean(&quot;${role(sync)}-valid&quot;,true).commit();if(sync)pauseSync()}"
+        errorLine2="                                                                                                                                                                                                                                                                                                                                                                                                                         ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemotePreferences.kt"
+            line="35"
+            column="410"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="        editor.remove(prefix).commit()"
+        errorLine2="                              ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemotePreferences.kt"
+            line="88"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="ApplySharedPref"
+        severity="Warning"
+        message="Consider using `apply()` instead; `commit` writes its data to persistent storage immediately, whereas `apply` will handle it in the background"
+        category="Correctness"
+        priority="6"
+        summary="Use `apply()` on `SharedPreferences`"
+        explanation="Consider using `apply()` instead of `commit` on shared preferences. Whereas `commit` blocks and writes its data to persistent storage immediately, `apply` will handle it in the background."
+        errorLine1="            synchronized(stateLock){if(preferences.getString(&quot;$prefix-token&quot;,null)==encoded&amp;&amp;preferences.getString(&quot;$prefix-refresh-token&quot;,null)==refresh)preferences.edit().putBoolean(&quot;$prefix-reauth&quot;,true).commit()}"
+        errorLine2="                                                                                                                                                                                                               ~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemotePreferences.kt"
+            line="115"
+            column="208"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        severity="Warning"
+        message="Field requires API level 29 (current min is 26): `android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE`"
+        category="Correctness"
+        priority="6"
+        summary="Using inlined constants on older versions"
+        explanation="This check scans through all the Android API field references in the application and flags certain constants, such as static final integers and Strings, which were introduced in later versions. These will actually be copied into the class files rather than being referenced, which means that the value is available even when running on older devices. In some cases that&apos;s fine, and in other cases it can result in a runtime crash or incorrect behavior. It depends on the context, so consider the code carefully and decide whether it&apos;s safe and can be suppressed or whether the code needs to be guarded.&#xA;&#xA;If you really want to use this API and don&apos;t need to support older devices just set the `minSdkVersion` in your `build.gradle` or `AndroidManifest.xml` files.&#xA;&#xA;If your code is **deliberately** accessing newer APIs, and you have ensured (e.g. with conditional execution) that this code will only ever be called on a supported platform, then you can annotate your class or method with the `@TargetApi` annotation specifying the local minimum SDK to apply, such as `@TargetApi(11)`, such that this check considers 11 rather than your manifest file&apos;s minimum SDK as the required API level."
+        errorLine1="            breakStrategy=android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE;hyphenationFrequency=android.text.Layout.HYPHENATION_FREQUENCY_NONE"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderActivity.kt"
+            line="364"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        severity="Warning"
+        message="Field requires API level 29 (current min is 26): `android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE`"
+        category="Correctness"
+        priority="6"
+        summary="Using inlined constants on older versions"
+        explanation="This check scans through all the Android API field references in the application and flags certain constants, such as static final integers and Strings, which were introduced in later versions. These will actually be copied into the class files rather than being referenced, which means that the value is available even when running on older devices. In some cases that&apos;s fine, and in other cases it can result in a runtime crash or incorrect behavior. It depends on the context, so consider the code carefully and decide whether it&apos;s safe and can be suppressed or whether the code needs to be guarded.&#xA;&#xA;If you really want to use this API and don&apos;t need to support older devices just set the `minSdkVersion` in your `build.gradle` or `AndroidManifest.xml` files.&#xA;&#xA;If your code is **deliberately** accessing newer APIs, and you have ensured (e.g. with conditional execution) that this code will only ever be called on a supported platform, then you can annotate your class or method with the `@TargetApi` annotation specifying the local minimum SDK to apply, such as `@TargetApi(11)`, such that this check considers 11 rather than your manifest file&apos;s minimum SDK as the required API level."
+        errorLine1="            breakStrategy=android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE;hyphenationFrequency=android.text.Layout.HYPHENATION_FREQUENCY_NONE"
+        errorLine2="                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderActivity.kt"
+            line="364"
+            column="27"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        severity="Warning"
+        message="Field requires API level 29 (current min is 26): `android.graphics.text.LineBreaker#BREAK_STRATEGY_SIMPLE`"
+        category="Correctness"
+        priority="6"
+        summary="Using inlined constants on older versions"
+        explanation="This check scans through all the Android API field references in the application and flags certain constants, such as static final integers and Strings, which were introduced in later versions. These will actually be copied into the class files rather than being referenced, which means that the value is available even when running on older devices. In some cases that&apos;s fine, and in other cases it can result in a runtime crash or incorrect behavior. It depends on the context, so consider the code carefully and decide whether it&apos;s safe and can be suppressed or whether the code needs to be guarded.&#xA;&#xA;If you really want to use this API and don&apos;t need to support older devices just set the `minSdkVersion` in your `build.gradle` or `AndroidManifest.xml` files.&#xA;&#xA;If your code is **deliberately** accessing newer APIs, and you have ensured (e.g. with conditional execution) that this code will only ever be called on a supported platform, then you can annotate your class or method with the `@TargetApi` annotation specifying the local minimum SDK to apply, such as `@TargetApi(11)`, such that this check considers 11 rather than your manifest file&apos;s minimum SDK as the required API level."
+        errorLine1="            .setLineSpacing(0f, settings.lineSpacing).setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_SIMPLE)"
+        errorLine2="                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderLayout.kt"
+            line="137"
+            column="72"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        severity="Warning"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        category="Correctness"
+        priority="6"
+        summary="Target SDK attribute is not targeting latest version"
+        explanation="When your application or sdk runs on a version of Android that is more recent than your `targetSdk` specifies that it has been tested with, various compatibility modes kick in. This ensures that your application continues to work, but it may look out of place. For example, if the `targetSdk` is less than 14, your app may get an option button in the UI.&#xA;&#xA;To fix this issue, set the `targetSdk` to the highest available value. Then test your app to make sure everything works correctly. You may want to consult the compatibility notes to see what changes apply to each version you are adding support for: https://developer.android.com/reference/android/os/Build.VERSION_CODES.html as well as follow this guide:&#xA;https://developer.android.com/distribute/best-practices/develop/target-sdk.html"
+        url="https://developer.android.com/distribute/best-practices/develop/target-sdk.html"
+        urls="https://developer.android.com/distribute/best-practices/develop/target-sdk.html,https://developer.android.com/reference/android/os/Build.VERSION_CODES.html"
+        errorLine1="        targetSdk = 36"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="app\build.gradle.kts"
+            line="11"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        severity="Warning"
+        message="A newer version of com.google.code.gson:gson than 2.11.0 is available: 2.15.0"
+        category="Correctness"
+        priority="4"
+        summary="Newer Library Versions Available"
+        explanation="This detector checks with a central repository to see if there are newer versions available for the dependencies used by this project. This is similar to the `GradleDependency` check, which checks for newer versions available in the Android SDK tools and libraries, but this works with any MavenCentral dependency, and connects to the library every time, which makes it more flexible but also **much** slower."
+        errorLine1="    implementation(&quot;com.google.code.gson:gson:2.11.0&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\build.gradle.kts"
+            line="33"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        severity="Warning"
+        message="The attribute `android:dataExtractionRules` only applies for Android 12 and higher; since `minSdkVersion` is API 26 you should also set `android:fullBackupContent`"
+        category="Security"
+        priority="3"
+        summary="Missing data extraction rules"
+        explanation="Before Android 12, the attributes `android:allowBackup` and `android:fullBackupContent` were used to configure all forms of backup, including cloud backups, device-to-device transfers and adb backup.&#xA;&#xA;In Android 12 and higher, these attributes have been deprecated and will only apply to cloud backups. You should instead use the attribute `android:dataExtractionRules`, specifying an `@xml` resource that configures which files to back up, for cloud backups and for device-to-device transfers, separately. If your `minSdkVersion` supports older versions, you&apos;ll still want to specify an `android:fullBackupContent` resource if the default behavior is not right for your app."
+        url="https://developer.android.com/about/versions/12/backup-restore#xml-changes"
+        urls="https://developer.android.com/about/versions/12/backup-restore#xml-changes,https://goo.gle/DataExtractionRules"
+        errorLine1="    &lt;application android:name=&quot;.ReaderApp&quot; android:label=&quot;静读&quot; android:theme=&quot;@style/AppTheme&quot; android:allowBackup=&quot;false&quot; android:dataExtractionRules=&quot;@xml/data_extraction_rules&quot; android:supportsRtl=&quot;true&quot; android:icon=&quot;@drawable/ic_book&quot;>"
+        errorLine2="                                                                                                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\AndroidManifest.xml"
+            line="6"
+            column="152"/>
+    </issue>
+
+    <issue
+        id="ViewConstructor"
+        severity="Warning"
+        message="Custom view `AppearanceEditor` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
+        category="Usability"
+        priority="3"
+        summary="Missing View constructors for XML inflation"
+        explanation="Some layout tools (such as the Android layout editor) need to find a constructor with one of the following signatures:&#xA;* `View(Context context)`&#xA;* `View(Context context, AttributeSet attrs)`&#xA;* `View(Context context, AttributeSet attrs, int defStyle)`&#xA;&#xA;If your custom view needs to perform initialization which does not apply when used in a layout editor, you can surround the given code with a check to see if `View#isInEditMode()` is false, since that method will return `false` at runtime but true within a user interface editor."
+        errorLine1="class AppearanceEditor("
+        errorLine2="      ~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\AppearanceEditor.kt"
+            line="14"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="ViewConstructor"
+        severity="Warning"
+        message="Custom view `PageSurface` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
+        category="Usability"
+        priority="3"
+        summary="Missing View constructors for XML inflation"
+        explanation="Some layout tools (such as the Android layout editor) need to find a constructor with one of the following signatures:&#xA;* `View(Context context)`&#xA;* `View(Context context, AttributeSet attrs)`&#xA;* `View(Context context, AttributeSet attrs, int defStyle)`&#xA;&#xA;If your custom view needs to perform initialization which does not apply when used in a layout editor, you can surround the given code with a check to see if `View#isInEditMode()` is false, since that method will return `false` at runtime but true within a user interface editor."
+        errorLine1="private class PageSurface(context:Context,private val turn:(Boolean)->Unit,private val tap:()->Unit):FrameLayout(context){"
+        errorLine2="              ~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderActivity.kt"
+            line="746"
+            column="15"/>
+    </issue>
+
+    <issue
+        id="ViewConstructor"
+        severity="Warning"
+        message="Custom view `ShelfSwipeLayout` is missing constructor used by tools: `(Context)` or `(Context,AttributeSet)` or `(Context,AttributeSet,int)`"
+        category="Usability"
+        priority="3"
+        summary="Missing View constructors for XML inflation"
+        explanation="Some layout tools (such as the Android layout editor) need to find a constructor with one of the following signatures:&#xA;* `View(Context context)`&#xA;* `View(Context context, AttributeSet attrs)`&#xA;* `View(Context context, AttributeSet attrs, int defStyle)`&#xA;&#xA;If your custom view needs to perform initialization which does not apply when used in a layout editor, you can surround the given code with a check to see if `View#isInEditMode()` is false, since that method will return `false` at runtime but true within a user interface editor."
+        errorLine1="class ShelfSwipeLayout(context:Context,private val switch:(Int)->Unit):FrameLayout(context){"
+        errorLine2="      ~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\ShelfSwipeLayout.kt"
+            line="10"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        fields.forEach{(button,read)->val color=Color.parseColor(read());button.text=&quot;${button.contentDescription}  ${read().uppercase(Locale.ROOT)}&quot;;button.setTextColor(Ui.contrastText(color));button.background=GradientDrawable().apply{setColor(color);cornerRadius=ui.dp(10).toFloat();setStroke(ui.dp(1),ui.muted)}}"
+        errorLine2="                                                                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\AppearanceEditor.kt"
+            line="63"
+            column="86"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="            listOf(&quot;红 R&quot;,&quot;绿 G&quot;,&quot;蓝 B&quot;).forEachIndexed{i,name->labels.getOrNull(i)?.text=&quot;$name · ${components()[i]}&quot;}"
+        errorLine2="                                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\AppearanceEditor.kt"
+            line="88"
+            column="88"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="            fun slider(title:String,min:Int,max:Int,current:Int,label:(Int)->String,apply:(Int)->ReadingSettings){val text=ui.text(&quot;$title · ${label(current)}&quot;,16f,true);panel.addView(text);val bar=SeekBar(this).apply{this.max=max-min;progress=(current-min).coerceIn(0,max-min);contentDescription=title};bar.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(b:SeekBar?,p:Int,user:Boolean){text.text=&quot;$title · ${label(p+min)}&quot;;if(user){val next=apply(p+min);preview.textSize=next.fontSize;preview.setLineSpacing(0f,next.lineSpacing)}};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){save(apply(bar.progress+min))}});panel.addView(bar)}"
+        errorLine2="                                                                                                                                                                                                                                                                                                                                                                                                                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\MainActivity.kt"
+            line="548"
+            column="447"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        slider.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener{override fun onProgressChanged(bar:SeekBar?,value:Int,user:Boolean){val index=((value/1000f)*sections.size).toInt().coerceAtMost(sections.lastIndex);label.text=&quot;${value/10f}% · ${sections[index].title}&quot;};override fun onStartTrackingTouch(b:SeekBar?){};override fun onStopTrackingTouch(b:SeekBar?){} })"
+        errorLine2="                                                                                                                                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderActivity.kt"
+            line="652"
+            column="242"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        val preview=TextView(this).apply{text=&quot;山光悦鸟性，潭影空人心。\n阅读设置会立即预览并保存。&quot;;setPadding(dp(12),dp(12),dp(12),dp(12));textSize=settings.fontSize;typeface=ReaderPaginator.face(settings,&quot;body&quot;);setTextColor(this@ReaderActivity.foreground);setBackgroundColor(this@ReaderActivity.background)}"
+        errorLine2="                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderActivity.kt"
+            line="703"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="                override fun onProgressChanged(b:SeekBar?,value:Int,user:Boolean){heading.text=&quot;$title · ${format(value+min)}&quot;;if(title==&quot;字号&quot;)preview.textSize=(value+min).toFloat()}"
+        errorLine2="                                                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\reader\ReaderActivity.kt"
+            line="721"
+            column="96"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        if(busy){operationStatus.text=operationMessage+&quot;\n已有请求进行中，请等待完成后重试。&quot;;operationStatus.visibility=View.VISIBLE;Toast.makeText(this,&quot;已有请求进行中，请稍候&quot;,Toast.LENGTH_SHORT).show();return}"
+        errorLine2="                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemoteActivity.kt"
+            line="55"
+            column="39"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        if(busy){operationStatus.text=operationMessage+&quot;\n已有请求进行中，请等待完成后重试。&quot;;operationStatus.visibility=View.VISIBLE;Toast.makeText(this,&quot;已有请求进行中，请稍候&quot;,Toast.LENGTH_SHORT).show();return}"
+        errorLine2="                                                       ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemoteActivity.kt"
+            line="55"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="            panel.addView(CheckBox(this).apply{text=&quot;${entry.title} · ${entry.author} · $status&quot;;setTextColor(ui.foreground);isChecked=entry.id in selected;setOnCheckedChangeListener{_,checked->if(checked)selected.add(entry.id)else selected.remove(entry.id)}})"
+        errorLine2="                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\remote\RemoteActivity.kt"
+            line="135"
+            column="53"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="String literal in `setText` can not be translated. Use Android resources instead."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        panel.addView(Switch(this).apply{text=&quot;自动下载新版 APK&quot;;setTextColor(ui.foreground);isChecked=updater.autoDownloadEnabled;setOnCheckedChangeListener{_,checked->updater.autoDownloadEnabled=checked}})"
+        errorLine2="                                               ~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\update\UpdateActivity.kt"
+            line="36"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        severity="Warning"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        category="Internationalization"
+        priority="6"
+        summary="TextView Internationalization"
+        explanation="When calling `TextView#setText`&#xA;* Never call `Number#toString()` to format numbers; it will not handle fraction separators and locale-specific digits properly. Consider using `String#format` with proper format specifications (`%d` or `%f`) instead.&#xA;* Do not pass a string literal (e.g. &quot;Hello&quot;) to display text. Hardcoded text can not be properly translated to other languages. Consider using Android resource strings instead.&#xA;* Do not build messages by concatenating text chunks. Such messages can not be properly translated."
+        url="https://developer.android.com/guide/topics/resources/localization.html"
+        urls="https://developer.android.com/guide/topics/resources/localization.html"
+        errorLine1="        operate({updater.latest()?.also{if(updater.autoDownloadEnabled&amp;&amp;ReleaseUpdates.newer(it.version,updater.installedVersion))updater.download(it)}},onError={status.text=&quot;检查失败：${it.message?:&quot;请检查网络后重试&quot;}&quot;}){latest->release=latest"
+        errorLine2="                                                                                                                                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="app\src\main\java\org\quietreader\update\UpdateActivity.kt"
+            line="55"
+            column="175"/>
+    </issue>
+
+</issues>

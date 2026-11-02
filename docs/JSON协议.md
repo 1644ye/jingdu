@@ -27,7 +27,11 @@
 
 书籍 type 仅接受 `poetry` 与 `novel`。诗集不能包含 `volumes` 或 `chapters`，小说不能包含 `poems`。内容块 type 仅接受 `paragraph`、`heading`、`separator`。`tags` 是字符串数组，允许空数组；实际正文数组必须非空。不分卷的小说可省略 `volumes` 和章节的 `volumeId`，提供 `volumeId` 时必须引用同书中存在的卷。
 
-拼音是对应诗行的辅助文本，不承诺逐字对齐。没有提供的辅助字段由阅读界面隐藏。
+拼音是对应诗行的辅助文本，不承诺逐字对齐。没有提供的辅助字段由阅读界面隐藏。诗集模板已经填入《静夜思》的实际示例：行内 `pinyin`、`translation`、`note`，诗作内 `background`、`translation`、`appreciation`。辅助文本写在内容文件中，显示偏好保存在本地阅读设置中，不要把设置字段加进书籍 JSON。
+
+阅读工具栏“辅助”分别管理六类内容，每项可选隐藏、小字显示、正文大小、点击链接浮现。链接显示为带下划线的标签，点击在可滚动弹窗里查看完整内容。隐藏模式不会因点击原文而展开；旧版设置仍保留点击诗行展开辅助内容的行为，明确选择显示方式后按新设置显示。更改显示方式不改变正文 ID、原文、书签和笔记坐标。
+
+备份中的 `ReadingSettings` 可选增加 `pinyinDisplay`、`translationDisplay`、`notesDisplay`、`backgroundDisplay`、`poemTranslationDisplay`、`appreciationDisplay`。取值为 `legacy`、`hidden`、`small`、`inline`、`link`；省略按 `legacy` 处理，沿用旧版显示开关。篇章阅读历史存放在备份 `metadata` 中的 `remote:read:书籍ID`，值是序列化 JSON 字符串，篇章 ID 对应 `reading` 或 `read`。仅实际打开／到达末尾的篇章更新标记，不推断跳过的篇章已读；所选备份仅包含所选书籍的记录。
 
 ## ID 与更新
 

@@ -1,0 +1,10 @@
+Version: 1.4.0 (12)
+Core: 43 passed, 0 failed
+Android API 36, non-debuggable Release installed: 90 passed, 73.977 seconds
+Auxiliary UI and final screenshots: 2 passed, 4.737 seconds
+Independent JSON Schema: 22 passed
+Release lint: 0 errors, 28 warnings
+Build: Debug, Release, AndroidTest successful
+Stable Tang book/poem/stanza/line IDs preserved; four original placeholder corrections
+Tang: 319 poems; 1613 pinyin lines; every poem has notes and background
+Private library update verified against published bytes; catalog library ID and both novel entries preserved

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.quietreader.core.ReleaseUpdatesTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-02T02:49:18.884Z" hostname="AMD-YES" time="0.011">
+  <properties/>
+  <testcase name="unrelatedHostsAndRepositoriesCannotProvideAnInstaller" classname="org.quietreader.core.ReleaseUpdatesTest" time="0.004"/>
+  <testcase name="selectsCurrentDebugDistributionWhenReleaseHasOtherAssets" classname="org.quietreader.core.ReleaseUpdatesTest" time="0.002"/>
+  <testcase name="numericVersionsDoNotUseLexicalOrTagDates" classname="org.quietreader.core.ReleaseUpdatesTest" time="0.003"/>
+  <testcase name="aSingleApkIsSupportedButAmbiguousAndMissingPackagesAreRejected" classname="org.quietreader.core.ReleaseUpdatesTest" time="0.001"/>
+  <testcase name="draftAndPreviewDoNotBecomeAnAutomaticUpdate" classname="org.quietreader.core.ReleaseUpdatesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -18,7 +18,7 @@
 ## 1. 安装应用
 
 - [下载最新版本及查看更新说明](https://github.com/1644ye/jingdu/releases/latest)
-- [直接下载 1.3.2 APK](https://github.com/1644ye/jingdu/releases/download/v1.3.2/QuietReader-1.3.2.apk)
+- [直接下载 1.4.0 APK](https://github.com/1644ye/jingdu/releases/download/v1.4.0/QuietReader-1.4.0.apk)
 - [下载当前 main 分支源码 ZIP](https://github.com/1644ye/jingdu/archive/refs/heads/main.zip)
 
 把 APK 下载到 Android 设备后打开，按系统提示安装；系统要求时，允许浏览器或文件管理器“安装未知应用”。更新现有安装时直接覆盖安装，保留原应用数据。
@@ -49,7 +49,9 @@
 
 App 内也有“更多 → 下载模板”入口。
 
-填写正文时保留根节点的 `schemaVersion: 1` 和 `kind: "ebook-library"`。书籍和篇章、诗行、段落需要稳定且不重复的 ID；更新既有内容时保留原 ID，新增内容再使用新 ID。诗集可提供拼音、译文和注释，小说可使用卷、章和正文段落。
+填写正文时保留根节点的 `schemaVersion: 1` 和 `kind: "ebook-library"`。书籍和篇章、诗行、段落需要稳定且不重复的 ID；更新既有内容时保留原 ID，新增内容再使用新 ID。诗集模板包含逐行拼音、译文、注释，以及全诗背景、译文和赏析的完整填写示例；小说可使用卷、章和正文段落。
+
+阅读诗集时点工具栏“辅助”，可分别设置拼音、逐行译文、注释、创作背景、全诗译文和赏析：隐藏、小字、正文大小、点击链接浮现。设置立即保存，可随时切回只显示原文；缺少的内容不会自动生成。目录显示“阅读中”和“已读”：翻到该篇最后一页或在滚动模式看到最后一行／段落末尾后记为已读，跳过的篇章保持未读。篇章记录进入本地备份；GitHub 仍只同步既有的书籍进度和阅读状态。
 
 **GitHub 书源要求一份 JSON 文件恰好一本书**；本地导入可以一份 JSON 包含多本。
 
@@ -203,6 +205,7 @@ GitHub 登录令牌由 Android Keystore 加密保存在设备上，书库备份�
 | --- | --- |
 | 新建／改名／排序／删除书架，重命名首页 | 更多 → 自定义书架 |
 | 选择书架 | 首页底部点名称，或在书籍区域左右滑动 |
+| 快速新增书架 | 首页底部“＋”，或“加入书架”弹窗 → 新建书架并加入 |
 | 列表／网格显示 | 更多 → 列表显示／网格显示 |
 | 控制单书在首页显示 | 书籍详情 → 在首页显示／从首页隐藏 |
 | 全选、取消选择、批量归属／隐藏／标签／所选备份 | 更多 → 书架管理 → 批量操作 |
@@ -315,7 +318,7 @@ adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell am instrument -w org.quietreader.test/android.test.InstrumentationTestRunner
 ```
 
-1.3.2 的非调试 Release 已通过全部 83 项 Android 回归，包含 12 项新增令牌续期测试；42 项核心复用通过缓存，Release Lint 0 错误／28 警告。真实第三方账号授权、双设备联网同步及厂商后台行为需在相应设备验收，范围见[自动续期记录](docs/1.3.2自动续期.md)、[账号与隐私记录](docs/1.3.1账号与隐私.md)和[验收报告](ACCEPTANCE.md)。
+1.4.0 的非调试 Release 已通过全部 90 项 Android 回归；43 项核心测试、22 项独立 Schema 检查通过，Release Lint 0 错误／28 警告。书架切换、辅助内容、目录已读与备份的结果及手机验收步骤见 [1.4.0 验证记录](docs/1.4.0书架与辅助阅读.md)。真实第三方账号授权、双设备联网同步及厂商后台行为仍需在相应设备验收，范围见[自动续期记录](docs/1.3.2自动续期.md)和[验收报告](ACCEPTANCE.md)。
 
 ## 更多资料
 
@@ -323,6 +326,7 @@ adb shell am instrument -w org.quietreader.test/android.test.InstrumentationTest
 - [GitHub 登录与仓库配置](docs/GitHub登录配置.md)
 - [备份格式与恢复说明](docs/备份与数据.md)
 - [书架、软件更新与手机验收步骤](docs/1.3.0书架与更新.md)
+- [1.4.0 辅助阅读与目录标记](docs/1.4.0书架与辅助阅读.md)
 - [当前功能与待验证范围](docs/当前开发缺口.md)
 - [实施状态](IMPLEMENTATION.md) · [需求范围](REQUIREMENTS.md) · [依赖说明](docs/依赖说明.md)
 

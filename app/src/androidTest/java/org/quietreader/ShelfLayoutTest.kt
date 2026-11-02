@@ -54,6 +54,29 @@ class ShelfLayoutTest:ActivityInstrumentationTestCase2<MainActivity>(MainActivit
         await("恢复首页显示后应重新出现"){onUi{books(main).contains(id)}}
         screenshot("shelves-home")
     }
+    fun testRapidShelfSwitchKeepsPageListAndAdapterInstances(){
+        val main=activity;ready(main)
+        val list=onUi{all(main.window.decorView).filterIsInstance<AbsListView>().first()}
+        val adapter=onUi{list.adapter}
+        val area=onUi{all(main.window.decorView).first{it.contentDescription=="书架切换区域"}}
+        val tabs=onUi{all(main.window.decorView).first{it.contentDescription=="底部书架选择"}}
+        onUi{repeat(12){index->all(main.window.decorView).filterIsInstance<Button>().first{it.text==if(index%2==0)"测试诗集" else "测试小说"}.performClick()}}
+        await("连续切换后动画应稳定结束"){onUi{area.alpha==1f&&area.translationX==0f&&selected(main,"测试小说")}}
+        onUi{assertSame(list,all(main.window.decorView).filterIsInstance<AbsListView>().first());assertSame(adapter,list.adapter);assertSame(tabs,all(main.window.decorView).first{it.contentDescription=="底部书架选择"})}
+        click(main,"测试诗集");await("复用列表仍应展示对应书籍"){onUi{books(main).contains(id)}}
+    }
+    fun testJoinShelfOffersNewShelfAfterExistingShelves(){
+        val main=activity;ready(main)
+        onUi{main.javaClass.getDeclaredMethod("chooseGroup",List::class.java,Boolean::class.javaPrimitiveType).apply{isAccessible=true}.invoke(main,listOf(id),true)}
+        tapDialog("＋ 新建书架并加入")
+        await("新建书架名称可编辑"){
+            val root=instrumentation.uiAutomation.rootInActiveWindow?:return@await false
+            try{fun fill(node:AccessibilityNodeInfo):Boolean{if(node.className=="android.widget.EditText")return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,android.os.Bundle().apply{putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,"新增书架验证")});for(i in 0 until node.childCount){val child=node.getChild(i)?:continue;try{if(fill(child))return true}finally{child.recycle()}};return false};fill(root)}finally{root.recycle()}
+        }
+        tapDialog("保存")
+        await("已有书架时仍能新增并加入书籍"){store.groups().firstOrNull{it.name=="新增书架验证"}?.let{it.id in store.groupIds(id)}?:false}
+        ready(main);assertTrue(onUi{all(main.window.decorView).any{it.contentDescription=="新建书架"}})
+    }
     fun testHorizontalGesturesSwitchShelvesAndVerticalDragKeepsShelf(){
         val main=activity;ready(main)
         // Put fixture shelves immediately after Home, regardless of any existing user shelves.

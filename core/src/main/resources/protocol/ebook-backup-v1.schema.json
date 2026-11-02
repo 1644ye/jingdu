@@ -685,9 +685,21 @@
             "custom"
           ]
         },
-        "customBackground": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#F8F6F0" },
-        "customSurface": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#FFFDF7" },
-        "customAccent": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "default": "#416752" },
+        "customBackground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#F8F6F0"
+        },
+        "customSurface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#FFFDF7"
+        },
+        "customAccent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "default": "#416752"
+        },
         "keepAwake": {
           "type": "boolean"
         },
@@ -708,6 +720,66 @@
         },
         "showAnalysis": {
           "type": "boolean"
+        },
+        "pinyinDisplay": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "hidden",
+            "small",
+            "inline",
+            "link"
+          ]
+        },
+        "translationDisplay": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "hidden",
+            "small",
+            "inline",
+            "link"
+          ]
+        },
+        "notesDisplay": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "hidden",
+            "small",
+            "inline",
+            "link"
+          ]
+        },
+        "backgroundDisplay": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "hidden",
+            "small",
+            "inline",
+            "link"
+          ]
+        },
+        "poemTranslationDisplay": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "hidden",
+            "small",
+            "inline",
+            "link"
+          ]
+        },
+        "appreciationDisplay": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "hidden",
+            "small",
+            "inline",
+            "link"
+          ]
         }
       },
       "required": [

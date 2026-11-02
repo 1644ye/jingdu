@@ -230,7 +230,7 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
     @Synchronized fun exportContent(ids: List<String>): JsonObject = Protocol.wrap(ids.distinct().map { book(it) ?: throw IllegalArgumentException("书籍不存在：$it") })
 
     @Synchronized fun deleteBooks(ids: List<String>) = transaction { db ->
-        ids.distinct().forEach { id -> db.delete("settings","scope=?",arrayOf(id)); db.delete("metadata","key=?",arrayOf("remote:home:$id")); db.delete("books","id=?",arrayOf(id)) }
+        ids.distinct().forEach { id -> db.delete("settings","scope=?",arrayOf(id)); db.delete("metadata","key IN (?,?)",arrayOf("remote:home:$id","remote:read:$id")); db.delete("books","id=?",arrayOf(id)) }
         Unit
     }
 
@@ -284,9 +284,14 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
         }
         return if(found<0)null else anchor.copy(start=found,end=found+quote.length,orphaned=false)
     }
-    @Synchronized fun savePosition(anchor: Anchor,progress: Float) = transaction { db ->
+    @Synchronized fun sectionReadStates(bookId:String):Map<String,String> = remoteMetadata("read:$bookId")?.entrySet()?.associate{it.key to it.value.asString}.orEmpty()
+    @Synchronized fun savePosition(anchor: Anchor,progress: Float,completedSections:Set<String> = emptySet()) = transaction { db ->
         require(progress.isFinite() && progress in 0f..1f) { "阅读进度无效。" }
         val normalized = checkedAnchor(anchor,pointQuote = true)
+        val history=remoteMetadata("read:${anchor.bookId}")?:JsonObject()
+        if(history.get(anchor.sectionId)?.asString!="read")history.addProperty(anchor.sectionId,"reading")
+        if(completedSections.isNotEmpty()){val valid=sections(anchor.bookId).map{it.id}.toSet();require(completedSections.all{it in valid}){"已读篇章不存在"};completedSections.forEach{history.addProperty(it,"read")}}
+        saveRemoteMetadata("read:${anchor.bookId}",history)
         db.insertWithOnConflict("positions",null,ContentValues().apply { put("book_id",anchor.bookId); put("anchor",gson.toJson(normalized)); put("progress",progress) },SQLiteDatabase.CONFLICT_REPLACE)
         db.execSQL("UPDATE books SET progress=?,last_read=?,status=CASE WHEN ? >= 0.999 THEN 'read' WHEN status='read' THEN 'read' ELSE 'reading' END WHERE id=?",
             arrayOf<Any>(progress,System.currentTimeMillis(),progress,anchor.bookId)); (appContext as? org.quietreader.ReaderApp)?.scheduleSync(); Unit
@@ -412,7 +417,7 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
         listOf("positions","annotations").forEach{key->retain(snapshot,key){it.getAsJsonObject("anchor").get("bookId").asString in selected}}
         retain(snapshot,"settings"){it.get("scope").asString.let{scope->scope.isEmpty()||scope in selected}}
         val metadata=snapshot.getAsJsonObject("metadata")
-        metadata.keySet().toList().filter{key->(key.startsWith("remote:source:")||key.startsWith("remote:personal:")||key.startsWith("remote:home:"))&&key.substringAfter("remote:").substringAfter(':') !in selected}.forEach{metadata.remove(it)}
+        metadata.keySet().toList().filter{key->(key.startsWith("remote:source:")||key.startsWith("remote:personal:")||key.startsWith("remote:home:")||key.startsWith("remote:read:"))&&key.substringAfter("remote:").substringAfter(':') !in selected}.forEach{metadata.remove(it)}
         val groups=snapshot.getAsJsonArray("memberships").map{it.asJsonObject.get("groupId").asLong}.toSet()
         retain(snapshot,"groups"){it.get("id").asLong in groups}
         require(validateBackup(snapshot).isEmpty()){"所选书籍备份校验失败"}
@@ -648,6 +653,7 @@ class LibraryStore(context: Context, databaseName: String = "quiet-reader.db") :
         listOf("customBackground","customSurface","customAccent").forEach { key ->
             if(obj.has(key)) text(key)?.let { if(!it.matches(Regex("#[0-9a-fA-F]{6}"))) add("$key 必须为 #RRGGBB 六位颜色值") }
         }
+        listOf("pinyinDisplay","translationDisplay","notesDisplay","backgroundDisplay","poemTranslationDisplay","appreciationDisplay").forEach{key->if(obj.has(key))text(key)?.let{if(it !in setOf("legacy","hidden","small","inline","link"))add("$key 显示方式无效")}}
         text("fontFamily")?.let { if(it.length>256) add("fontFamily 太长") }
         number("fontSize",12.0,64.0); number("lineSpacing",1.0,3.0); number("paragraphSpacing",0.0,80.0); number("margin",0.0,120.0)
         listOf("keepAwake","indent","showOriginal","showPinyin","showTranslation","showNotes","showAnalysis").forEach { key ->

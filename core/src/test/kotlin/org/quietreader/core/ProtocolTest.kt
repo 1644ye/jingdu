@@ -19,6 +19,17 @@ class ProtocolTest {
 
     @Test fun utf8BomIsAccepted() = assertTrue(parse("\uFEFF" + sample()).valid)
 
+    @Test fun poetryTemplateIncludesFilledAuxiliaryFieldsAndSettingsKeepLegacyBehavior(){
+        val result=parse(sample("poetry-template"));assertTrue(result.warnings.isEmpty())
+        val poem=result.document!!.getAsJsonArray("books")[0].asJsonObject.getAsJsonArray("poems")[0].asJsonObject
+        listOf("background","translation","appreciation").forEach{assertFalse(poem.get(it).asString.isBlank())}
+        val line=poem.getAsJsonArray("stanzas")[0].asJsonObject.getAsJsonArray("lines")[0].asJsonObject
+        listOf("pinyin","translation","note").forEach{assertFalse(line.get(it).asString.isBlank())}
+        assertEquals("small",ReadingSettings(showNotes=true).auxiliaryMode("note"))
+        assertEquals("hidden",ReadingSettings(showNotes=true,notesDisplay="hidden").auxiliaryMode("note"))
+        assertEquals("link",ReadingSettings().withAuxiliaryMode("background","link").auxiliaryMode("background"))
+    }
+
     @Test fun originalWhitespaceAndScriptLikeTextSurviveRoundTrip() {
         val b = book()
         val text = "  原文 空格\n\n<script>alert('纯文本')</script> \n"

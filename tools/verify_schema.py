@@ -56,4 +56,11 @@ if backup_schema.exists():
     for color in ('not-a-color', None):
         assert not settings_validator.is_valid(dict(custom_settings, customAccent=color))
         passed += 1
+    auxiliary_settings = dict(custom_settings, pinyinDisplay='small', translationDisplay='hidden',
+        notesDisplay='link', backgroundDisplay='inline', poemTranslationDisplay='legacy', appreciationDisplay='link')
+    settings_validator.validate(auxiliary_settings)
+    passed += 1
+    for mode in ('popup', None, {}):
+        assert not settings_validator.is_valid(dict(auxiliary_settings, notesDisplay=mode))
+        passed += 1
 print(f'Independent JSON Schema checks passed: {passed}')

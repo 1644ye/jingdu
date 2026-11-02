@@ -8,8 +8,8 @@ import java.util.concurrent.Executors
 object ReaderPositions {
     private val writer=Executors.newSingleThreadExecutor { task -> Thread(task,"QuietReaderPositions") }
 
-    fun save(store:LibraryStore,anchor:Anchor,progress:Float,onError:(Exception)->Unit){
-        write({store.savePosition(anchor,progress)},{},onError)
+    fun save(store:LibraryStore,anchor:Anchor,progress:Float,completedSections:Set<String> = emptySet(),onError:(Exception)->Unit){
+        write({store.savePosition(anchor,progress,completedSections)},{},onError)
     }
 
     /** Ordered reader mutations also include settings and annotations, so Main can flush before restore. */

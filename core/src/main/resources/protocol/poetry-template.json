@@ -6,17 +6,56 @@
       "id": "my-poetry-1",
       "type": "poetry",
       "title": "填写诗集名称",
+      "author": "填写编者或作者",
+      "language": "zh-CN",
+      "description": "诗集简介；可按示例填写拼音、逐行译注、背景和赏析。",
+      "tags": [
+        "诗集"
+      ],
       "poems": [
         {
           "id": "poem-1",
-          "title": "填写诗作标题",
+          "title": "静夜思（示例，可替换）",
+          "author": "李白",
+          "dynasty": "唐",
+          "genre": "五言绝句",
+          "tags": [
+            "思乡"
+          ],
+          "background": "以旅夜独处、见月思乡的情境展开。这里填写有依据的写作背景或阅读语境，不确定的作年不必填写。",
+          "translation": "明亮的月光洒在床前，仿佛地面铺了一层霜。抬头望向明月，又低下头想念故乡。",
+          "appreciation": "诗从眼前月光写到心中故乡，以抬头、低头两个动作使思乡之情自然流露。",
           "stanzas": [
             {
               "id": "stanza-1",
               "lines": [
                 {
                   "id": "line-1",
-                  "original": "填写第一行诗文"
+                  "original": "床前明月光，",
+                  "pinyin": "chuáng qián míng yuè guāng，",
+                  "translation": "床前洒着明亮的月光。",
+                  "note": "床：诗句中的具体所指有不同解释，可结合所用版本阅读。"
+                },
+                {
+                  "id": "line-2",
+                  "original": "疑是地上霜。",
+                  "pinyin": "yí shì dì shàng shuāng。",
+                  "translation": "仿佛是地面上的一层霜。",
+                  "note": "疑：好像、以为。"
+                },
+                {
+                  "id": "line-3",
+                  "original": "举头望明月，",
+                  "pinyin": "jǔ tóu wàng míng yuè，",
+                  "translation": "抬起头望着明月。",
+                  "note": "举头：抬头。"
+                },
+                {
+                  "id": "line-4",
+                  "original": "低头思故乡。",
+                  "pinyin": "dī tóu sī gù xiāng。",
+                  "translation": "低下头思念故乡。",
+                  "note": "故乡：家乡。"
                 }
               ]
             }

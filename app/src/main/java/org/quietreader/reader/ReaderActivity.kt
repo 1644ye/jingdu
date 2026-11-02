@@ -44,6 +44,8 @@ class ReaderActivity : Activity() {
     private val main = Handler(Looper.getMainLooper())
     private lateinit var bookId: String
     private var poetry = false
+    private val readStates=mutableMapOf<String,String>()
+    private lateinit var auxiliaryButton:Button
     private var bookTitle = ""
     private var initialized = false
     private var foregroundActive = false
@@ -94,7 +96,7 @@ class ReaderActivity : Activity() {
 
     private data class TextBinding(val view: TextView, val block: ReaderBlock, val start: Int, val end: Int)
     private data class ScrollUnit(val section:Int,val part:Int,val page:ReaderPage)
-    private data class Initial(val title: String, val poetry: Boolean, val sections: List<SectionSummary>, val settings: ReadingSettings, val position: Anchor?, val annotations: List<AnnotationRecord>, val revision: Int)
+    private data class Initial(val title: String, val poetry: Boolean, val sections: List<SectionSummary>, val settings: ReadingSettings, val position: Anchor?, val annotations: List<AnnotationRecord>, val revision: Int,val readStates:Map<String,String>)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,10 +105,10 @@ class ReaderActivity : Activity() {
         createUi()
         runWork({
             val summary = store.listBooks().firstOrNull { it.id == bookId } ?: error("这本书已被删除，请返回书架。")
-            Initial(summary.title, summary.type == "poetry", store.sections(bookId), store.settings(bookId), store.position(bookId), store.annotations(bookId),summary.contentRevision)
+            Initial(summary.title, summary.type == "poetry", store.sections(bookId), store.settings(bookId), store.position(bookId), store.annotations(bookId),summary.contentRevision,store.sectionReadStates(bookId))
         }) { initial ->
             bookTitle = initial.title; poetry = initial.poetry; sections = initial.sections
-            settings = normalize(initial.settings); annotations = initial.annotations; contentRevision = initial.revision; initialized = true
+            settings = normalize(initial.settings); annotations = initial.annotations; contentRevision = initial.revision; initialized = true;readStates.putAll(initial.readStates);auxiliaryButton.visibility=if(poetry)View.VISIBLE else View.GONE
             val explicitSection = savedInstanceState?.getString("sectionId") ?: intent.getStringExtra("sectionId")
             val explicitContent = savedInstanceState?.getString("contentId") ?: intent.getStringExtra("contentId")
             val explicitOffset = savedInstanceState?.getInt("offset") ?: intent.getIntExtra("offset", 0)
@@ -138,6 +140,7 @@ class ReaderActivity : Activity() {
         top.addView(button("更多") { showMore() })
         toolbar.addView(top)
         val actions = LinearLayout(this)
+        auxiliaryButton=button("辅助"){showAuxiliarySettings()};auxiliaryButton.visibility=View.GONE;actions.addView(auxiliaryButton)
         actions.addView(button("目录") { showContents() })
         actions.addView(button("进度") { showProgress() })
         actions.addView(button("搜索") { showSearch() })
@@ -362,7 +365,7 @@ class ReaderActivity : Activity() {
             if(block.role=="separator") gravity=Gravity.CENTER
             if(block.role=="empty"){
                 isClickable=true;isFocusable=true;contentDescription="当前显示设置下没有正文，恢复纯原文"
-                setOnClickListener{expandedLines.clear();changeSettings(settings.copy(showOriginal=true,showPinyin=false,showTranslation=false,showNotes=false,showAnalysis=false))}
+                setOnClickListener{expandedLines.clear();changeSettings(settings.originalOnly())}
             }
             if(block.selectable && block.isOriginal) {
                 setTextIsSelectable(true)
@@ -385,9 +388,13 @@ class ReaderActivity : Activity() {
                 }
             }
             if(block.contentId.isNotEmpty()) visibleText.add(TextBinding(this,block,start,end))
+            if(block.role=="link") {setTextColor(Ui(this@ReaderActivity,settings).accent);paintFlags=paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG;contentDescription="查看${block.popupTitle}"}
             if(block.role!="empty")setOnClickListener {
                 if(selecting)return@setOnClickListener
-                if(block.role=="poem"){
+                if(block.role=="link"){
+                    val text=TextView(this@ReaderActivity).apply{this.text=block.popup;textSize=settings.fontSize;setPadding(dp(18),dp(12),dp(18),dp(12));setTextIsSelectable(true)}
+                    AlertDialog.Builder(this@ReaderActivity).setTitle(block.popupTitle).setView(ScrollView(this@ReaderActivity).apply{addView(text)}).setPositiveButton("关闭",null).show()
+                }else if(block.role=="poem"){
                     if(expandedLines.contains(block.contentId))expandedLines.remove(block.contentId)else expandedLines.add(block.contentId)
                     rebuild(captureAnchor())
                 }else toggleToolbar()
@@ -461,7 +468,21 @@ class ReaderActivity : Activity() {
         val anchor=captureAnchor() ?: lastAnchor ?: return
         if(anchor.contentId.isEmpty())return
         lastAnchor=anchor;val value=progress(anchor)
-        ReaderPositions.save(store,anchor,value){e->main.post{if(!isDestroyed)toast("阅读位置保存失败：${e.message ?: "存储不可用"}")}}
+        val completed=mutableSetOf<String>()
+        if(settings.mode=="paged"&&pageIndex==pageList.lastIndex)completed.add(anchor.sectionId)
+        if(settings.mode=="scroll"&&::scroll.isInitialized){
+            val rect=android.graphics.Rect();scroll.getGlobalVisibleRect(rect)
+            visibleText.filter{it.block.isOriginal&&it.end==it.block.original.length}.forEach{binding->
+                val location=IntArray(2);binding.view.getLocationOnScreen(location)
+                if(location[1]+binding.view.height in rect.top..rect.bottom){
+                    val json=synchronized(sectionCache){sectionCache[binding.block.sectionId]}
+                    if(json!=null&&Content.texts(json,if(poetry)"poetry"else"novel").keys.lastOrNull()==binding.block.contentId)completed.add(binding.block.sectionId)
+                }
+            }
+        }
+        if(readStates[anchor.sectionId]!="read")readStates[anchor.sectionId]="reading"
+        completed.forEach{readStates[it]="read"}
+        ReaderPositions.save(store,anchor,value,completed){e->main.post{if(!isDestroyed)toast("阅读位置保存失败：${e.message ?: "存储不可用"}")}}
     }
     private fun toggleToolbar(){if(selecting)return;val visibility=if(toolbar.visibility==View.VISIBLE)View.INVISIBLE else View.VISIBLE;toolbar.visibility=visibility;footer.visibility=visibility}
 
@@ -494,7 +515,7 @@ class ReaderActivity : Activity() {
         if(!initialized)return
         runWork({
             val summary=store.listBooks().firstOrNull{it.id==bookId}
-            if(summary==null)null else Initial(summary.title,summary.type=="poetry",store.sections(bookId),store.settings(bookId),store.position(bookId),store.annotations(bookId),summary.contentRevision)
+            if(summary==null)null else Initial(summary.title,summary.type=="poetry",store.sections(bookId),store.settings(bookId),store.position(bookId),store.annotations(bookId),summary.contentRevision,store.sectionReadStates(bookId))
         }){current->
             if(current==null){toast("这本书已被删除");finish();return@runWork}
             val newSettings=normalize(current.settings)
@@ -504,7 +525,8 @@ class ReaderActivity : Activity() {
             synchronized(sectionCache){sectionCache.clear()}
             sections=current.sections;bookTitle=current.title;poetry=current.poetry;contentRevision=current.revision
             titleView.text=bookTitle
-            annotations=current.annotations;settings=newSettings
+            annotations=current.annotations;settings=newSettings;readStates.clear();readStates.putAll(current.readStates)
+            auxiliaryButton.visibility=if(poetry)View.VISIBLE else View.GONE
             applyTheme()
             if(previous.orphaned){toast("原位置已变化，从对应篇章开始阅读。");rebuild(Anchor(bookId,previous.sectionId,""))}else rebuild(previous)
         }
@@ -562,7 +584,7 @@ class ReaderActivity : Activity() {
         val options=mutableListOf(if(poetry)"上一首"else"上一章",if(poetry)"下一首"else"下一章","查看本书书签和笔记")
         if(poetry)options.addAll(listOf(if(favorite)"取消收藏本首"else"收藏本首","复制整首诗","纯原文模式","选择诗行复制"))
         AlertDialog.Builder(this).setTitle("阅读操作").setItems(options.toTypedArray()){_,which->
-            when(which){0->navigateSection(sectionIndex-1);1->navigateSection(sectionIndex+1);2->openNotes();3->{val id=sections[sectionIndex].id;writeWork({store.togglePoemFavorite(bookId,id);store.isPoemFavorite(bookId,id)}){toast(if(it)"已收藏本首诗"else"已取消收藏")}};4->runWork({ReaderDocument.poemText(loadSection(sectionIndex))}){copy(it,"整首诗")};5->{expandedLines.clear();changeSettings(settings.copy(showOriginal=true,showPinyin=false,showTranslation=false,showNotes=false,showAnalysis=false))};6->choosePoemLines()}
+            when(which){0->navigateSection(sectionIndex-1);1->navigateSection(sectionIndex+1);2->openNotes();3->{val id=sections[sectionIndex].id;writeWork({store.togglePoemFavorite(bookId,id);store.isPoemFavorite(bookId,id)}){toast(if(it)"已收藏本首诗"else"已取消收藏")}};4->runWork({ReaderDocument.poemText(loadSection(sectionIndex))}){copy(it,"整首诗")};5->{expandedLines.clear();changeSettings(settings.originalOnly())};6->choosePoemLines()}
         }.setNegativeButton("关闭",null).show()
     }
 
@@ -588,6 +610,7 @@ class ReaderActivity : Activity() {
     }
 
     private fun showContents(){
+        persistPosition()
         val panel=LinearLayout(this).apply {orientation=LinearLayout.VERTICAL;setPadding(dp(16),0,dp(16),0)}
         val input=EditText(this).apply {hint=if(poetry)"搜索诗名"else"搜索章节或卷名";isSingleLine=true}
         val list=ListView(this);panel.addView(input);panel.addView(list,LinearLayout.LayoutParams(-1,dp(380)))
@@ -599,7 +622,7 @@ class ReaderActivity : Activity() {
                 var volume=""
                 matches.forEach { section ->
                     if(section.volumeId.isNotEmpty() && section.volumeId!=volume)add(section.volumeTitle to null)
-                    volume=section.volumeId;add(section.title to section)
+                    volume=section.volumeId;add((when(readStates[section.id]){"read"->"已读 · ";"reading"->"阅读中 · ";else->""})+section.title to section)
                 }
             }
             list.adapter=object:BaseAdapter(){
@@ -662,6 +685,17 @@ class ReaderActivity : Activity() {
         applyTheme();rebuild(anchor)
     }
 
+    private fun showAuxiliarySettings(){
+        if(!poetry)return
+        val helper=Ui(this,settings);val panel=helper.panel()
+        panel.addView(helper.text("各项独立保存；链接模式点击带下划线的标签弹出内容。",14f))
+        val values=listOf("hidden","small","inline","link")
+        listOf("pinyin" to "拼音","translation" to "逐行译文","note" to "逐行注释","background" to "创作背景","poemTranslation" to "全诗译文","appreciation" to "赏析").forEach{(kind,title)->
+            panel.addView(helper.text(title,16f,true));panel.addView(helper.spinner(listOf("隐藏","小字显示","正文大小","点击链接浮现"),values.indexOf(settings.auxiliaryMode(kind))){index->expandedLines.clear();changeSettings(settings.withAuxiliaryMode(kind,values[index]))}.apply{contentDescription="$title 显示形式"})
+        }
+        panel.addView(helper.button("只显示原文"){expandedLines.clear();changeSettings(settings.originalOnly())})
+        helper.dialog().setTitle("辅助内容显示").setView(helper.scroll(panel)).setPositiveButton("完成",null).show()
+    }
     private fun showSettings(){
         var settingsDialog:AlertDialog?=null
         val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(20),dp(8),dp(20),dp(16))}
@@ -697,12 +731,7 @@ class ReaderActivity : Activity() {
         check("阅读时保持屏幕常亮",settings.keepAwake){settings.copy(keepAwake=it)}
         if(!poetry)check("段落首行缩进",settings.indent){settings.copy(indent=it)}
         else {
-            label("诗歌辅助内容（点击诗行也可单独展开）")
-            check("显示原文",settings.showOriginal){settings.copy(showOriginal=it)}
-            check("显示拼音",settings.showPinyin){settings.copy(showPinyin=it)}
-            check("显示逐行译文",settings.showTranslation){settings.copy(showTranslation=it)}
-            check("显示逐行注释",settings.showNotes){settings.copy(showNotes=it)}
-            check("显示背景、全诗译文和赏析",settings.showAnalysis){settings.copy(showAnalysis=it)}
+            panel.addView(button("拼音、注释与背景显示"){showAuxiliarySettings()})
         }
         panel.addView(button("恢复本书为全局设置"){
             val anchor=captureAnchor();writeWork({store.clearBookSettings(bookId);store.settings()}){settings=normalize(it);applyTheme();rebuild(anchor);settingsDialog?.dismiss();showSettings();toast("已恢复全局阅读设置")}

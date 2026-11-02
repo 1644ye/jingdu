@@ -71,7 +71,22 @@ data class ReadingSettings(
     val showTranslation: Boolean = false,
     val showNotes: Boolean = false,
     val showAnalysis: Boolean = false,
-)
+    val pinyinDisplay: String = "legacy",
+    val translationDisplay: String = "legacy",
+    val notesDisplay: String = "legacy",
+    val backgroundDisplay: String = "legacy",
+    val poemTranslationDisplay: String = "legacy",
+    val appreciationDisplay: String = "legacy",
+) {
+    fun auxiliaryMode(kind:String):String {
+        val chosen=when(kind){"pinyin"->pinyinDisplay;"translation"->translationDisplay;"note"->notesDisplay;"background"->backgroundDisplay;"poemTranslation"->poemTranslationDisplay;else->appreciationDisplay}
+        if(chosen in setOf("hidden","small","inline","link"))return chosen
+        val visible=when(kind){"pinyin"->showPinyin;"translation"->showTranslation;"note"->showNotes;else->showAnalysis}
+        return if(visible)"small"else"hidden"
+    }
+    fun withAuxiliaryMode(kind:String,mode:String):ReadingSettings=when(kind){"pinyin"->copy(pinyinDisplay=mode);"translation"->copy(translationDisplay=mode);"note"->copy(notesDisplay=mode);"background"->copy(backgroundDisplay=mode);"poemTranslation"->copy(poemTranslationDisplay=mode);else->copy(appreciationDisplay=mode)}
+    fun originalOnly()=copy(showOriginal=true,showPinyin=false,showTranslation=false,showNotes=false,showAnalysis=false,pinyinDisplay="hidden",translationDisplay="hidden",notesDisplay="hidden",backgroundDisplay="hidden",poemTranslationDisplay="hidden",appreciationDisplay="hidden")
+}
 
 object Content {
     fun sections(book: JsonObject): List<JsonObject> =

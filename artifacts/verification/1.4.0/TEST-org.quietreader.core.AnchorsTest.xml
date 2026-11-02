@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.quietreader.core.AnchorsTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-11-02T02:49:18.510Z" hostname="AMD-YES" time="0.019">
+  <properties/>
+  <testcase name="duplicateContextsAreOrphanedInsteadOfChoosingFirst" classname="org.quietreader.core.AnchorsTest" time="0.008"/>
+  <testcase name="uniqueQuoteAndContextMoveWithinSameContent" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="changedContextIsNotSilentlyRebound" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="layoutChangeWithSameTextPreservesExactOffset" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="repeatedQuoteCanBeDisambiguatedByRecordedContext" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="utf16OffsetsMatchAndroidIncludingEmoji" classname="org.quietreader.core.AnchorsTest" time="0.001"/>
+  <testcase name="deletedContentRetainsAnnotationButMarksItOrphaned" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="quoteMustAgreeWithRecordedOriginalRange" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="changedCaretWithoutQuoteCannotBeReliablyRelocated" classname="org.quietreader.core.AnchorsTest" time="0.0"/>
+  <testcase name="orphanDoesNotAutomaticallyBindAgain" classname="org.quietreader.core.AnchorsTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

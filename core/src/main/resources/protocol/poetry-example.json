@@ -9,7 +9,10 @@
       "author": "李白",
       "language": "zh-CN",
       "description": "用于演示诗歌分行及辅助内容。",
-      "tags": ["唐诗", "示例"],
+      "tags": [
+        "唐诗",
+        "示例"
+      ],
       "poems": [
         {
           "id": "poem-jing-ye-si",
@@ -17,10 +20,12 @@
           "author": "李白",
           "dynasty": "唐",
           "genre": "五言绝句",
-          "tags": ["思乡"],
-          "background": "",
-          "translation": "",
-          "appreciation": "",
+          "tags": [
+            "思乡"
+          ],
+          "background": "诗以旅夜独处、月光入室为情境，从对月色的感受转向思念故乡。此处不附会具体写作年月。",
+          "translation": "床前洒着明亮的月光，仿佛地上铺了白霜。抬头望向明月，又低下头想念家乡。",
+          "appreciation": "月光、霜色与抬头低头的动作构成短小的场景，朴素语言承载普遍的思乡情感。",
           "stanzas": [
             {
               "id": "stanza-1",

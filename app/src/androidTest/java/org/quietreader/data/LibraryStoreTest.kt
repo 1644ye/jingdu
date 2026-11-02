@@ -14,6 +14,37 @@ import org.quietreader.core.ReadingSettings
 /** Exercises Android SQLite itself, including rollback, foreign keys, migration and durable reopen. */
 @Suppress("DEPRECATION")
 class LibraryStoreTest : AndroidTestCase() {
+    fun testSectionReadHistoryDoesNotMarkSkippedSectionsAndSurvivesSelectedBackup(){
+        val a=novel("history-a")
+        val chapters=a.getAsJsonArray("chapters")
+        val second=chapters[0].deepCopy().asJsonObject.apply{addProperty("id","c2");getAsJsonArray("blocks").forEachIndexed{i,b->b.asJsonObject.addProperty("id","second-$i")}}
+        chapters.add(second)
+        store.importFile(Protocol.wrap(listOf(a,novel("history-b"))))
+        store.savePosition(Anchor("history-a","c2","second-0"),.7f)
+        assertEquals(mapOf("c2" to "reading"),store.sectionReadStates("history-a"))
+        store.savePosition(Anchor("history-a","c2","second-0"),1f,setOf("c2"))
+        store.savePosition(Anchor("history-a","c2","second-0"),.7f)
+        assertEquals("read",store.sectionReadStates("history-a")["c2"])
+        assertFalse(store.sectionReadStates("history-a").containsKey("c1"))
+        store.savePosition(Anchor("history-b","c1","p1"),.1f)
+        val selected=store.selectedBackup(listOf("history-a"))
+        assertFalse(selected.getAsJsonObject("metadata").has("remote:read:history-b"))
+        store.restoreBackup(selected);store.close();store=LibraryStore(context,databaseName)
+        assertEquals(mapOf("c2" to "read"),store.sectionReadStates("history-a"))
+        store.deleteBooks(listOf("history-a"));assertTrue(store.sectionReadStates("history-a").isEmpty())
+    }
+    fun testAuxiliarySettingsPersistAndRejectInvalidBackupFields(){
+        val value=ReadingSettings(pinyinDisplay="small",notesDisplay="link",backgroundDisplay="inline")
+        store.saveSettings(value);val backup=store.backup()
+        assertTrue(store.validateBackup(backup).isEmpty());store.restoreBackup(backup)
+        store.close();store=LibraryStore(context,databaseName);assertEquals(value,store.settings())
+        val bad=backup.deepCopy();bad.getAsJsonArray("settings")[0].asJsonObject.getAsJsonObject("settings").add("pinyinDisplay",JsonObject())
+        assertTrue(store.validateBackup(bad).any{it.contains("pinyinDisplay")})
+        val legacy=backup.deepCopy();val fields=legacy.getAsJsonArray("settings")[0].asJsonObject.getAsJsonObject("settings")
+        listOf("pinyinDisplay","translationDisplay","notesDisplay","backgroundDisplay","poemTranslationDisplay","appreciationDisplay").forEach{fields.remove(it)}
+        fields.addProperty("showNotes",true)
+        store.restoreBackup(legacy);assertEquals("small",store.settings().auxiliaryMode("note"))
+    }
     fun testCustomShelvesHomeVisibilityAndOrderingSurviveBackupAndReopen(){
         store.importFile(Protocol.wrap(listOf(novel("home-a"),novel("home-b"))))
         val a=store.createGroup("诗与远方");val b=store.createGroup("长篇小说")
