@@ -1,0 +1,8 @@
+
+org.quietreader.ImportFlowTest:.
+Test results for InstrumentationTestRunner=.
+Time: 6.656
+
+OK (1 test)
+
+

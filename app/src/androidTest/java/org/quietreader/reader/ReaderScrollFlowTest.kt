@@ -86,13 +86,7 @@ class ReaderScrollFlowTest:ActivityInstrumentationTestCase2<ReaderActivity>(Read
         assertTrue("回收窗口后不得继续使用旧惯性坐标：$rebased → $end",kotlin.math.abs(end-rebased!!)<100)
     }
     fun testShortSectionsDoNotChainAdvanceWithoutAnotherGesture(){
-        val chapters=JsonArray().apply{repeat(60){i->add(JsonObject().apply{
-            addProperty("id","c$i");addProperty("title","短章 $i")
-            add("blocks",JsonArray().apply{add(JsonObject().apply{addProperty("id","b$i");addProperty("type","paragraph");addProperty("text","月光落在书页上。")})})
-        })}}
-        store.deleteBooks(listOf(bookId))
-        store.importFile(JsonObject().apply{addProperty("schemaVersion",1);addProperty("kind","ebook-library");add("books",JsonArray().apply{add(JsonObject().apply{addProperty("id",bookId);addProperty("type","novel");addProperty("title","短章");add("chapters",chapters)})})})
-        setActivityIntent(Intent(Intent.ACTION_MAIN).putExtra("bookId",bookId))
+        installShortSections()
         val screen=activity
         val busy=ReaderActivity::class.java.getDeclaredField("busy").apply{isAccessible=true}
         val edge=ReaderActivity::class.java.getDeclaredField("windowEnd").apply{isAccessible=true}
@@ -110,6 +104,66 @@ class ReaderScrollFlowTest:ActivityInstrumentationTestCase2<ReaderActivity>(Read
         Thread.sleep(750);instrumentation.waitForIdleSync()
         var after=0;instrumentation.runOnMainSync{after=edge.getInt(screen)}
         assertTrue("一次滑动不应让加载回调接力翻过多个短章：$before → $after",after<=before+1)
+    }
+    private fun installShortSections(start:Int=0){
+        val chapters=JsonArray().apply{repeat(60){i->add(JsonObject().apply{
+            addProperty("id","c$i");addProperty("title","短章 $i")
+            add("blocks",JsonArray().apply{add(JsonObject().apply{addProperty("id","b$i");addProperty("type","paragraph");addProperty("text","月光落在书页上。")})})
+        })}}
+        store.deleteBooks(listOf(bookId))
+        store.importFile(JsonObject().apply{addProperty("schemaVersion",1);addProperty("kind","ebook-library");add("books",JsonArray().apply{add(JsonObject().apply{addProperty("id",bookId);addProperty("type","novel");addProperty("title","短章");add("chapters",chapters)})})})
+        setActivityIntent(Intent(Intent.ACTION_MAIN).putExtra("bookId",bookId).putExtra("sectionId","c$start"))
+    }
+    fun testUpwardScrollNearBothEdgesLoadsPreviousInsteadOfNext(){
+        installShortSections(30)
+        val screen=activity
+        val busy=ReaderActivity::class.java.getDeclaredField("busy").apply{isAccessible=true}
+        val start=ReaderActivity::class.java.getDeclaredField("windowStart").apply{isAccessible=true}
+        val end=ReaderActivity::class.java.getDeclaredField("windowEnd").apply{isAccessible=true}
+        var scroll:ScrollView?=null
+        await{var ready=false;instrumentation.runOnMainSync{
+            scroll=all(screen.window.decorView).filterIsInstance<ScrollView>().firstOrNull()
+            ready=scroll!=null&&!busy.getBoolean(screen)&&scroll!!.scrollY>80
+        };ready}
+        var before=0;var oldEnd=0
+        instrumentation.runOnMainSync{before=start.getInt(screen);oldEnd=end.getInt(screen);scroll!!.scrollTo(0,0)}
+        await{var ready=false;instrumentation.runOnMainSync{ready=!busy.getBoolean(screen)&&start.getInt(screen)<before};ready}
+        var newEnd=0;instrumentation.runOnMainSync{newEnd=end.getInt(screen)}
+        assertTrue("向上回看不能自动加载后续短章：$oldEnd → $newEnd",newEnd<=oldEnd)
+    }
+    fun testLoadingMustNotRebaseWhileFingerIsStillDragging(){
+        val screen=activity
+        await{store.position(bookId)?.start?.let{it>30000}==true}
+        val busy=ReaderActivity::class.java.getDeclaredField("busy").apply{isAccessible=true}
+        val extend=ReaderActivity::class.java.getDeclaredMethod("extendWindow",Boolean::class.javaPrimitiveType,Boolean::class.javaPrimitiveType).apply{isAccessible=true}
+        var scroll:ScrollView?=null;var first:View?=null
+        await{var ready=false;instrumentation.runOnMainSync{
+            scroll=all(screen.window.decorView).filterIsInstance<ScrollView>().first()
+            val window=scroll!!.getChildAt(0) as ViewGroup
+            ready=window.childCount==3&&!busy.getBoolean(screen)
+            if(!ready&&!busy.getBoolean(screen))extend.invoke(screen,true,false)
+        };ready}
+        val down=android.os.SystemClock.uptimeMillis()
+        fun touch(action:Int,y:Float){val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,scroll!!.width*.5f,y,0);scroll!!.dispatchTouchEvent(event);event.recycle()}
+        instrumentation.runOnMainSync{
+            val window=scroll!!.getChildAt(0) as ViewGroup
+            first=window.getChildAt(0)
+            busy.setBoolean(screen,true)
+            scroll!!.scrollTo(0,first!!.bottom+20)
+            busy.setBoolean(screen,false)
+            extend.invoke(screen,true,false)
+            touch(android.view.MotionEvent.ACTION_DOWN,scroll!!.height*.5f)
+            touch(android.view.MotionEvent.ACTION_MOVE,scroll!!.height*.6f)
+        }
+        Thread.sleep(300)
+        repeat(12){i->
+            instrumentation.runOnMainSync{touch(android.view.MotionEvent.ACTION_MOVE,scroll!!.height*(if(i%2==0).5f else .6f))}
+            Thread.sleep(20)
+        }
+        var retained=false
+        try{instrumentation.runOnMainSync{retained=first===(scroll!!.getChildAt(0) as ViewGroup).getChildAt(0)};assertTrue("手指仍按住并反向拖动时不得回收正文和重置坐标",retained)}
+        finally{instrumentation.runOnMainSync{touch(android.view.MotionEvent.ACTION_CANCEL,scroll!!.height*.6f)}}
+        await{var idle=false;instrumentation.runOnMainSync{idle=!busy.getBoolean(screen)};idle}
     }
     private fun all(view:View):List<View> = buildList{add(view);if(view is ViewGroup)for(i in 0 until view.childCount)addAll(all(view.getChildAt(i)))}
     private fun await(condition:()->Boolean){val limit=System.currentTimeMillis()+20000;while(System.currentTimeMillis()<limit){instrumentation.waitForIdleSync();if(condition())return;Thread.sleep(100)};fail("正文载入或位置保存未在20秒内完成")}

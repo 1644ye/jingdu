@@ -77,7 +77,7 @@ class ReaderActivity : Activity() {
     private lateinit var toolbar: LinearLayout
     private lateinit var titleView: TextView
     private lateinit var host: FrameLayout
-    private lateinit var scroll: ScrollView
+    private lateinit var scroll: ReaderScrollView
     private lateinit var content: LinearLayout
     private lateinit var status: TextView
     private lateinit var footer: LinearLayout
@@ -230,16 +230,16 @@ class ReaderActivity : Activity() {
                 synchronized(scrollPageCache){scrollPageCache[target]=pages}
                 val part=pageFor(anchor,pages).coerceIn(0,pages.lastIndex.coerceAtLeast(0))
                 val unit=ScrollUnit(target,part,pages[part]);scrollUnits.add(unit)
-                scroll = ScrollView(this).apply { isFillViewport = true; isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(dp(settings.margin),dp(12),dp(settings.margin),dp(12)) }
+                scroll = ReaderScrollView(this).apply { isFillViewport = true; isVerticalScrollBarEnabled = false; clipToPadding = false; setPadding(dp(settings.margin),dp(12),dp(settings.margin),dp(12)) }
                 // Leave enough trailing space to restore even the last short poem at its original line.
                 content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL;setPadding(0,0,0,(host.height-dp(24)).coerceAtLeast(0));isClickable = true; setOnClickListener { toggleToolbar() } }
                 scroll.addView(content,FrameLayout.LayoutParams(-1,-2)); host.addView(scroll,FrameLayout.LayoutParams(-1,-1))
                 content.addView(unitView(unit))
-                scroll.setOnScrollChangeListener { _, _, _, _, _ ->
+                scroll.setOnScrollChangeListener { _, _, y, _, oldY ->
                     if (!restoring && !busy) {
                         schedulePositionSave(); updateStatus()
-                        if (scroll.scrollY + scroll.height >= scrollContentEnd()-dp(300)) extendWindow(true)
-                        else if (scroll.scrollY < dp(80)) extendWindow(false)
+                        if (y>oldY && y + scroll.height >= scrollContentEnd()-dp(300)) extendWindow(true)
+                        else if (y<oldY && y < dp(80)) extendWindow(false)
                     }
                 }
                 afterContentLayout(request) {
@@ -307,36 +307,52 @@ class ReaderActivity : Activity() {
             pages
         }) { pages ->
             if(request!=generation) return@runWork
-            if(content.childCount>=3 && ((forward && content.getChildAt(0).bottom>scroll.scrollY) || (!forward && content.getChildAt(content.childCount-1).top<scroll.scrollY+scroll.height))){busy=false;return@runWork}
-            val beforeY=scroll.scrollY
-            restoring=true
-            synchronized(scrollPageCache){scrollPageCache[index]=pages}
-            val unit=ScrollUnit(index,if(wanted<0)pages.lastIndex else wanted,pages[if(wanted<0)pages.lastIndex else wanted])
-            val view=unitView(unit)
-            if(forward) {content.addView(view);scrollUnits.add(unit)} else {content.addView(view,0);scrollUnits.add(0,unit)}
-            var removedHeight=0
-            if(content.childCount>3) {
-                val removeAt=if(forward) 0 else content.childCount-1
-                val removedView=content.getChildAt(removeAt) as ViewGroup
-                if(removeAt==0)removedHeight=removedView.height
-                val removedText=(0 until removedView.childCount).map{removedView.getChildAt(it)}.toSet()
-                content.removeViewAt(removeAt)
-                scrollUnits.removeAt(removeAt)
-                visibleText.removeAll { it.view in removedText }
-            }
-            windowStart=scrollUnits.first().section;windowEnd=scrollUnits.last().section
-            synchronized(scrollPageCache){val retain=scrollUnits.map{it.section}.toSet();scrollPageCache.keys.toList().filter{it !in retain}.forEach{scrollPageCache.remove(it)}}
-            afterContentLayout(request) {
-                // Pixels are only a transient insertion adjustment; persisted positions use IDs/offsets.
-                scroll.scrollTo(0,beforeY+(if(!forward)view.height else 0)-removedHeight)
-                restoring=false;busy=false;updateStatus();schedulePositionSave()
-                if(step)scroll.smoothScrollBy(0,((if(forward)1 else -1)*scroll.height*.85f).toInt())
-                // Only fill an incomplete window here. Recycling must wait for another scroll
-                // event: trailing restoration space can otherwise keep this condition true
-                // and make load callbacks advance through short sections by themselves.
-                if(content.childCount<3 && scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
+            // Parsing may finish after the user has reversed direction. Do not change the
+            // coordinate system under a held finger or an active native fling.
+            afterScrollIdle(request) {
+                if(content.childCount>=3 && ((forward && content.getChildAt(0).bottom>scroll.scrollY) || (!forward && content.getChildAt(content.childCount-1).top<scroll.scrollY+scroll.height))){busy=false;return@afterScrollIdle}
+                val beforeY=scroll.scrollY
+                restoring=true
+                synchronized(scrollPageCache){scrollPageCache[index]=pages}
+                val unit=ScrollUnit(index,if(wanted<0)pages.lastIndex else wanted,pages[if(wanted<0)pages.lastIndex else wanted])
+                val view=unitView(unit)
+                if(forward) {content.addView(view);scrollUnits.add(unit)} else {content.addView(view,0);scrollUnits.add(0,unit)}
+                var removedHeight=0
+                if(content.childCount>3) {
+                    val removeAt=if(forward) 0 else content.childCount-1
+                    val removedView=content.getChildAt(removeAt) as ViewGroup
+                    if(removeAt==0)removedHeight=removedView.height
+                    val removedText=(0 until removedView.childCount).map{removedView.getChildAt(it)}.toSet()
+                    content.removeViewAt(removeAt)
+                    scrollUnits.removeAt(removeAt)
+                    visibleText.removeAll { it.view in removedText }
+                }
+                windowStart=scrollUnits.first().section;windowEnd=scrollUnits.last().section
+                synchronized(scrollPageCache){val retain=scrollUnits.map{it.section}.toSet();scrollPageCache.keys.toList().filter{it !in retain}.forEach{scrollPageCache.remove(it)}}
+                afterContentLayout(request) {
+                    // Pixels are only a transient insertion adjustment; persisted positions use IDs/offsets.
+                    scroll.scrollTo(0,beforeY+(if(!forward)view.height else 0)-removedHeight)
+                    restoring=false;busy=false;updateStatus();schedulePositionSave()
+                    if(step)scroll.smoothScrollBy(0,((if(forward)1 else -1)*scroll.height*.85f).toInt())
+                    // Only fill an incomplete window here. Recycling must wait for another scroll
+                    // event: trailing restoration space can otherwise keep this condition true
+                    // and make load callbacks advance through short sections by themselves.
+                    if(content.childCount<3 && scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
+                }
             }
         }
+    }
+
+    private fun afterScrollIdle(request:Int,action:()->Unit){
+        val target=scroll
+        val check=object:Runnable{
+            override fun run(){
+                if(request!=generation || isDestroyed || isFinishing || target!==scroll)return
+                if(target.touching || android.os.SystemClock.uptimeMillis()-target.lastMotionAt<120L)main.postDelayed(this,32)
+                else action()
+            }
+        }
+        check.run()
     }
 
     private fun showPage() {
@@ -763,6 +779,25 @@ class ReaderActivity : Activity() {
         val scroller=ScrollView(this).apply{addView(panel)}
         settingsDialog=AlertDialog.Builder(this).setTitle("阅读设置").setView(scroller).setPositiveButton("完成",null).create()
         settingsDialog?.show()
+    }
+}
+
+/** Track the whole gesture, even when a selectable TextView consumes its events. */
+private class ReaderScrollView(context:Context):ScrollView(context){
+    var touching=false
+        private set
+    var lastMotionAt=0L
+        private set
+    override fun dispatchTouchEvent(event:MotionEvent):Boolean{
+        if(event.actionMasked==MotionEvent.ACTION_DOWN)touching=true
+        lastMotionAt=android.os.SystemClock.uptimeMillis()
+        try{return super.dispatchTouchEvent(event)}finally{
+            if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL)touching=false
+        }
+    }
+    override fun onScrollChanged(l:Int,t:Int,oldl:Int,oldt:Int){
+        lastMotionAt=android.os.SystemClock.uptimeMillis()
+        super.onScrollChanged(l,t,oldl,oldt)
     }
 }
 
