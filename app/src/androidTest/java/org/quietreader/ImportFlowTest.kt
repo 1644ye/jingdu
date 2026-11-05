@@ -183,6 +183,7 @@ class ImportFlowTest : ActivityInstrumentationTestCase2<MainActivity>(MainActivi
         val homeButtons=onUi{all(main!!.window.decorView).filterIsInstance<Button>().map{it.text.toString()}}
         listOf("导入 JSON","下载模板","全选当前","取消选择","批量操作").forEach{assertFalse("首页不应显示 $it",it in homeButtons)}
         clickText("更多")
+        await("更多菜单应完成显示"){hasText("导入 JSON")}
         listOf("导入 JSON","下载模板","书架管理","应用配色").forEach{assertTrue("更多应有 $it",hasText(it))}
         clickText("下载模板")
         await("下载模板应打开可操作页面"){hasText("诗集最简模板")}

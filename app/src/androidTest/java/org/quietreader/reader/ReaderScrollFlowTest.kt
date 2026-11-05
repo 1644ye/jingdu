@@ -95,15 +95,18 @@ class ReaderScrollFlowTest:ActivityInstrumentationTestCase2<ReaderActivity>(Read
         await{var ready=false;instrumentation.runOnMainSync{
             scroll=all(screen.window.decorView).filterIsInstance<ScrollView>().firstOrNull()
             if(scroll!=null&&!busy.getBoolean(screen)){
-                ready=(scroll!!.getChildAt(0) as ViewGroup).childCount==3
+                ready=(scroll!!.getChildAt(0) as ViewGroup).childCount>=3
                 if(!ready)extend.invoke(screen,true,false)
             }
         };ready}
-        var before=0
-        instrumentation.runOnMainSync{before=edge.getInt(screen);scroll!!.scrollTo(0,scroll!!.getChildAt(0).height)}
+        var before=0;var y=0;var first:View?=null
+        instrumentation.runOnMainSync{before=edge.getInt(screen);first=(scroll!!.getChildAt(0) as ViewGroup).getChildAt(0);scroll!!.scrollTo(0,scroll!!.getChildAt(0).height);y=scroll!!.scrollY}
         Thread.sleep(750);instrumentation.waitForIdleSync()
-        var after=0;instrumentation.runOnMainSync{after=edge.getInt(screen)}
-        assertTrue("一次滑动不应让加载回调接力翻过多个短章：$before → $after",after<=before+1)
+        var after=0;var same=false;var finalY=0
+        instrumentation.runOnMainSync{after=edge.getInt(screen);same=first===(scroll!!.getChildAt(0) as ViewGroup).getChildAt(0);finalY=scroll!!.scrollY}
+        assertTrue("只允许补足有限预读窗口：$before → $after",after<=before+3)
+        assertTrue("预读不能接力回收并推进当前正文",same)
+        assertEquals("追加预读内容不能自行滚动",y,finalY)
     }
     private fun installShortSections(start:Int=0){
         val chapters=JsonArray().apply{repeat(60){i->add(JsonObject().apply{
@@ -131,12 +134,14 @@ class ReaderScrollFlowTest:ActivityInstrumentationTestCase2<ReaderActivity>(Read
         var newEnd=0;instrumentation.runOnMainSync{newEnd=end.getInt(screen)}
         assertTrue("向上回看不能自动加载后续短章：$oldEnd → $newEnd",newEnd<=oldEnd)
     }
-    fun testLoadingMustNotRebaseWhileFingerIsStillDragging(){
+    fun testLoadingDuringDraggingKeepsVisibleTextAndGesturePosition(){loadingWhileHeld(true)}
+    fun testPreviousContentArrivesWhileFingerHeldWithoutMovingVisibleText(){loadingWhileHeld(false)}
+    private fun loadingWhileHeld(forward:Boolean){
         val screen=activity
         await{store.position(bookId)?.start?.let{it>30000}==true}
         val busy=ReaderActivity::class.java.getDeclaredField("busy").apply{isAccessible=true}
         val extend=ReaderActivity::class.java.getDeclaredMethod("extendWindow",Boolean::class.javaPrimitiveType,Boolean::class.javaPrimitiveType).apply{isAccessible=true}
-        var scroll:ScrollView?=null;var first:View?=null
+        var scroll:ScrollView?=null;var reference:View?=null;var beforeTop=0
         await{var ready=false;instrumentation.runOnMainSync{
             scroll=all(screen.window.decorView).filterIsInstance<ScrollView>().first()
             val window=scroll!!.getChildAt(0) as ViewGroup
@@ -147,21 +152,27 @@ class ReaderScrollFlowTest:ActivityInstrumentationTestCase2<ReaderActivity>(Read
         fun touch(action:Int,y:Float){val event=android.view.MotionEvent.obtain(down,android.os.SystemClock.uptimeMillis(),action,scroll!!.width*.5f,y,0);scroll!!.dispatchTouchEvent(event);event.recycle()}
         instrumentation.runOnMainSync{
             val window=scroll!!.getChildAt(0) as ViewGroup
-            first=window.getChildAt(0)
+            reference=window.getChildAt(if(forward)1 else 0)
             busy.setBoolean(screen,true)
-            scroll!!.scrollTo(0,first!!.bottom+20)
+            scroll!!.scrollTo(0,if(forward)window.getChildAt(0).bottom+20 else 0)
             busy.setBoolean(screen,false)
-            extend.invoke(screen,true,false)
+            extend.invoke(screen,forward,false)
             touch(android.view.MotionEvent.ACTION_DOWN,scroll!!.height*.5f)
             touch(android.view.MotionEvent.ACTION_MOVE,scroll!!.height*.6f)
+            val location=IntArray(2);reference!!.getLocationOnScreen(location);beforeTop=location[1]
         }
         Thread.sleep(300)
         repeat(12){i->
             instrumentation.runOnMainSync{touch(android.view.MotionEvent.ACTION_MOVE,scroll!!.height*(if(i%2==0).5f else .6f))}
             Thread.sleep(20)
         }
-        var retained=false
-        try{instrumentation.runOnMainSync{retained=first===(scroll!!.getChildAt(0) as ViewGroup).getChildAt(0)};assertTrue("手指仍按住并反向拖动时不得回收正文和重置坐标",retained)}
+        var ready=false;var afterTop=0;var previousInserted=false
+        try{
+            instrumentation.runOnMainSync{ready=!busy.getBoolean(screen);previousInserted=(scroll!!.getChildAt(0) as ViewGroup).getChildAt(0)!==reference;val location=IntArray(2);reference!!.getLocationOnScreen(location);afterTop=location[1]}
+            assertTrue("按住拖动时也必须及时显示已加载的正文",ready)
+            if(!forward)assertTrue("前文必须已实际插入，不能只取消加载任务",previousInserted)
+            assertTrue("加载不能移动原可见正文：$beforeTop → $afterTop",kotlin.math.abs(afterTop-beforeTop)<=2)
+        }
         finally{instrumentation.runOnMainSync{touch(android.view.MotionEvent.ACTION_CANCEL,scroll!!.height*.6f)}}
         await{var idle=false;instrumentation.runOnMainSync{idle=!busy.getBoolean(screen)};idle}
     }

@@ -238,14 +238,14 @@ class ReaderActivity : Activity() {
                 scroll.setOnScrollChangeListener { _, _, y, _, oldY ->
                     if (!restoring && !busy) {
                         schedulePositionSave(); updateStatus()
-                        if (y>oldY && y + scroll.height >= scrollContentEnd()-dp(300)) extendWindow(true)
-                        else if (y<oldY && y < dp(80)) extendWindow(false)
+                        if (y>oldY && y + scroll.height >= scrollContentEnd()-scroll.height) extendWindow(true)
+                        else if (y<oldY && y < scroll.height) extendWindow(false)
                     }
                 }
                 afterContentLayout(request) {
                     restoreScroll(anchor)
                     restoring = false; updateStatus(); schedulePositionSave()
-                    if(scroll.scrollY<dp(80) && (part>0 || target>0))extendWindow(false)
+                    if(part>0 || target>0)extendWindow(false)
                     else if(scroll.scrollY+scroll.height >= scrollContentEnd()-dp(300)) extendWindow(true)
                 }
             }
@@ -272,6 +272,8 @@ class ReaderActivity : Activity() {
 
     private fun scrollContentEnd()=content.height-content.paddingBottom
 
+    private fun canGrowScrollWindow()=content.childCount<8 && (content.childCount<3 || scrollContentEnd()<scroll.height*3)
+
     private fun afterContentLayout(request:Int,action:()->Unit){
         val target=content
         target.viewTreeObserver.addOnPreDrawListener(object:android.view.ViewTreeObserver.OnPreDrawListener{
@@ -291,7 +293,7 @@ class ReaderActivity : Activity() {
         val index=if(sameSection)edge.section else edge.section+(if(forward)1 else -1)
         if(index !in sections.indices){if(step)toast(if(forward)"已到全书末尾"else"已经是开头");return}
         val wanted=if(sameSection)edge.part+(if(forward)1 else -1) else if(forward)0 else -1
-        if(content.childCount>=3) {
+        if(!canGrowScrollWindow()) {
             // Never discard a fragment which is still visible, including auxiliary-only text.
             if(forward && content.getChildAt(0).bottom>scroll.scrollY)return
             if(!forward && content.getChildAt(content.childCount-1).top<scroll.scrollY+scroll.height)return
@@ -307,18 +309,19 @@ class ReaderActivity : Activity() {
             pages
         }) { pages ->
             if(request!=generation) return@runWork
-            // Parsing may finish after the user has reversed direction. Do not change the
-            // coordinate system under a held finger or an active native fling.
+            // Native flings use absolute coordinates. A held drag can be updated safely
+            // when its coordinate shift is applied atomically with layout instead.
             afterScrollIdle(request) {
-                if(content.childCount>=3 && ((forward && content.getChildAt(0).bottom>scroll.scrollY) || (!forward && content.getChildAt(content.childCount-1).top<scroll.scrollY+scroll.height))){busy=false;return@afterScrollIdle}
-                val beforeY=scroll.scrollY
+                val recycle = !canGrowScrollWindow()
+                if(recycle && ((forward && content.getChildAt(0).bottom>scroll.scrollY) || (!forward && content.getChildAt(content.childCount-1).top<scroll.scrollY+scroll.height))){busy=false;return@afterScrollIdle}
                 restoring=true
                 synchronized(scrollPageCache){scrollPageCache[index]=pages}
                 val unit=ScrollUnit(index,if(wanted<0)pages.lastIndex else wanted,pages[if(wanted<0)pages.lastIndex else wanted])
                 val view=unitView(unit)
-                if(forward) {content.addView(view);scrollUnits.add(unit)} else {content.addView(view,0);scrollUnits.add(0,unit)}
                 var removedHeight=0
-                if(content.childCount>3) {
+                scroll.shiftOnNextLayout{(if(!forward)view.height else 0)-removedHeight}
+                if(forward) {content.addView(view);scrollUnits.add(unit)} else {content.addView(view,0);scrollUnits.add(0,unit)}
+                if(recycle) {
                     val removeAt=if(forward) 0 else content.childCount-1
                     val removedView=content.getChildAt(removeAt) as ViewGroup
                     if(removeAt==0)removedHeight=removedView.height
@@ -330,14 +333,12 @@ class ReaderActivity : Activity() {
                 windowStart=scrollUnits.first().section;windowEnd=scrollUnits.last().section
                 synchronized(scrollPageCache){val retain=scrollUnits.map{it.section}.toSet();scrollPageCache.keys.toList().filter{it !in retain}.forEach{scrollPageCache.remove(it)}}
                 afterContentLayout(request) {
-                    // Pixels are only a transient insertion adjustment; persisted positions use IDs/offsets.
-                    scroll.scrollTo(0,beforeY+(if(!forward)view.height else 0)-removedHeight)
                     restoring=false;busy=false;updateStatus();schedulePositionSave()
                     if(step)scroll.smoothScrollBy(0,((if(forward)1 else -1)*scroll.height*.85f).toInt())
                     // Only fill an incomplete window here. Recycling must wait for another scroll
                     // event: trailing restoration space can otherwise keep this condition true
                     // and make load callbacks advance through short sections by themselves.
-                    if(content.childCount<3 && scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
+                    if(canGrowScrollWindow() && scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
                 }
             }
         }
@@ -348,7 +349,7 @@ class ReaderActivity : Activity() {
         val check=object:Runnable{
             override fun run(){
                 if(request!=generation || isDestroyed || isFinishing || target!==scroll)return
-                if(target.touching || android.os.SystemClock.uptimeMillis()-target.lastMotionAt<120L)main.postDelayed(this,32)
+                if(!target.touching && android.os.SystemClock.uptimeMillis()-target.lastMotionAt<120L)main.postDelayed(this,32)
                 else action()
             }
         }
@@ -784,12 +785,29 @@ class ReaderActivity : Activity() {
 
 /** Track the whole gesture, even when a selectable TextView consumes its events. */
 private class ReaderScrollView(context:Context):ScrollView(context){
+    private var layoutShift:(()->Int)?=null
+    private var queuedFling:Int?=null
+    fun shiftOnNextLayout(shift:()->Int){layoutShift=shift}
+    override fun onLayout(changed:Boolean,l:Int,t:Int,r:Int,b:Int){
+        val shift=layoutShift
+        // Include any drag movement that arrived after insertion but before this layout.
+        val beforeY=scrollY
+        super.onLayout(changed,l,t,r,b)
+        if(shift!=null){
+            scrollTo(scrollX,beforeY+shift())
+            layoutShift=null
+            queuedFling?.let{velocity->queuedFling=null;super.fling(velocity)}
+        }
+    }
+    override fun fling(velocityY:Int){
+        if(layoutShift!=null)queuedFling=velocityY else super.fling(velocityY)
+    }
     var touching=false
         private set
     var lastMotionAt=0L
         private set
     override fun dispatchTouchEvent(event:MotionEvent):Boolean{
-        if(event.actionMasked==MotionEvent.ACTION_DOWN)touching=true
+        if(event.actionMasked==MotionEvent.ACTION_DOWN){touching=true;queuedFling=null}
         lastMotionAt=android.os.SystemClock.uptimeMillis()
         try{return super.dispatchTouchEvent(event)}finally{
             if(event.actionMasked==MotionEvent.ACTION_UP || event.actionMasked==MotionEvent.ACTION_CANCEL)touching=false
