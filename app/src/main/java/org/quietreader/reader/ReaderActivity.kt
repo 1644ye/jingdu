@@ -331,7 +331,10 @@ class ReaderActivity : Activity() {
                 scroll.scrollTo(0,beforeY+(if(!forward)view.height else 0)-removedHeight)
                 restoring=false;busy=false;updateStatus();schedulePositionSave()
                 if(step)scroll.smoothScrollBy(0,((if(forward)1 else -1)*scroll.height*.85f).toInt())
-                if(scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
+                // Only fill an incomplete window here. Recycling must wait for another scroll
+                // event: trailing restoration space can otherwise keep this condition true
+                // and make load callbacks advance through short sections by themselves.
+                if(content.childCount<3 && scroll.scrollY+scroll.height>=scrollContentEnd()-dp(100)) extendWindow(true)
             }
         }
     }

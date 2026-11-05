@@ -1,0 +1,10 @@
+
+org.quietreader.reader.ReaderScrollFlowTest:...
+org.quietreader.reader.ReaderAuxiliaryFlowTest:.....
+org.quietreader.reader.ReaderActivityFlowTest:.
+Test results for InstrumentationTestRunner=.........
+Time: 26.415
+
+OK (9 tests)
+
+
